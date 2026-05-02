@@ -731,39 +731,64 @@ end
 --=======================================================--
 --                   AUTH FLOW                           --
 --=======================================================--
-ABtn.MouseButton1Click:Connect(function()
-    local entered=KIn.Text
-    if entered=="" then KStatus.Text="Please enter your key.";KStatus.TextColor3=C.Warn;return end
-    ABtn.Text="Checking..."
-    KStatus.Text="Validating...";KStatus.TextColor3=C.T2
+
+-- Shared event so WaitForAuth() knows when auth is done
+local AuthDone    = false
+local AuthAPI     = nil  -- set after BuildMain succeeds
+
+local function doAuth()
+    local entered = KIn.Text
+    if entered == "" then
+        KStatus.Text = "Please enter your key."
+        KStatus.TextColor3 = C.Warn
+        return
+    end
+    ABtn.Text = "Checking..."
+    KStatus.Text = "Validating..."
+    KStatus.TextColor3 = C.T2
+
     task.spawn(function()
-        local ok,tier,expiresAt,err=validateKey(entered)
+        local ok, tier, expiresAt, err = validateKey(entered)
         if ok then
-            KStatus.Text="✓ Authenticated — launching ["..tier.."]";KStatus.TextColor3=C.Ok
+            KStatus.Text      = "✓ Authenticated — launching ["..tier.."]"
+            KStatus.TextColor3 = C.Ok
             Notify("Welcome","Phantom Hack ["..tier.."] loading...",3,"success")
             task.wait(.5)
             tw(KF,.3,{Size=UDim2.new(0,440,0,0),BackgroundTransparency=1})
-            task.wait(.35);KF:Destroy()
-            BuildMain(tier,expiresAt)
+            task.wait(.35)
+            pcall(function() KF:Destroy() end)
+            -- Build the main menu and store the returned API
+            AuthAPI  = BuildMain(tier, expiresAt)
+            AuthDone = true
         else
-            ABtn.Text="Authorize"
-            KStatus.Text="✗ "..err;KStatus.TextColor3=C.Bad
-            Notify("Auth Failed",err,4,"error")
+            ABtn.Text          = "Authorize"
+            KStatus.Text       = "✗ "..err
+            KStatus.TextColor3 = C.Bad
+            Notify("Auth Failed", err, 4, "error")
             tw(KStr,.1,{Color=C.Bad})
-            local op=KBox.Position
-            for i=1,5 do tw(KBox,.04,{Position=op+UDim2.fromOffset(i%2==0 and -7 or 7,0)});task.wait(.045) end
-            KBox.Position=op
-            task.delay(1.5,function() tw(KStr,.2,{Color=C.Bdr}) end)
+            local op = KBox.Position
+            for i=1,5 do
+                tw(KBox,.04,{Position=op+UDim2.fromOffset(i%2==0 and -7 or 7,0)})
+                task.wait(.045)
+            end
+            KBox.Position = op
+            task.delay(1.5, function() tw(KStr,.2,{Color=C.Bdr}) end)
         end
     end)
+end
+
+ABtn.MouseButton1Click:Connect(doAuth)
+
+-- Allow pressing Enter in the key box to submit
+KIn.FocusLost:Connect(function(enterPressed)
+    if enterPressed then doAuth() end
 end)
-KIn.FocusLost:Connect(function(enter) if enter then ABtn.MouseButton1Click:Fire() end end)
 
 --==[ TOGGLE HOTKEY ]==--
 UserInputService.InputBegan:Connect(function(input,gpe)
     if gpe then return end
     if input.KeyCode==BRAND.ToggleKey then
-        if Main then Main.Visible=not Main.Visible end
+        if Main then Main.Visible = not Main.Visible end
     end
 end)
 
@@ -773,9 +798,19 @@ Notify("Phantom Hack","Loaded  •  RightShift to toggle",5,"success")
 --=======================================================--
 --                   PUBLIC API                          --
 --=======================================================--
+-- Core.lua calls:
+--   local M  = loadstring(game:HttpGet(URL))()
+--   local PH = M.WaitForAuth()
+--
+-- WaitForAuth() yields until the player successfully authenticates,
+-- then returns the full API with the correct Tier already set.
 return {
-    WaitForAuth=function()
-        while not Main do task.wait(.1) end
-        return {Tab=MakeTab,Notify=Notify,Config=C,Tier=ValidatedTier,KeyExpiry=ValidatedExpiry}
+    WaitForAuth = function()
+        -- Yield until auth completes (AuthDone flipped by doAuth on success)
+        while not AuthDone do
+            task.wait(0.05)
+        end
+        -- AuthAPI was set by BuildMain — return it directly
+        return AuthAPI
     end
 }
