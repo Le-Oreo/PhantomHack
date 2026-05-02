@@ -1,61 +1,101 @@
---[===[ PHANTOM HACK V1.0 - BY OREO ]===]--
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+--[===[ PHANTOM HACK BY OREO - CUSTOM GUI ]===]--
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
-local Window = Rayfield:CreateWindow({
-    Name = "Phantom Hack V1.0 | Made by Oreo",
-    LoadingTitle = "Phantom Hack",
-    LoadingSubtitle = "by Oreo - V1.0",
-    ConfigurationSaving = {Enabled = true, FolderName = "Phantom", FileName = "Settings"}
-})
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "PhantomHackGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = playerGui
 
-local Tab = Window:CreateTab("Main", 4483362458)
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 420, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -160)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
 
-Tab:CreateParagraph({Title = "Welcome", Content = "Phantom Hack by Oreo\nVersion 1.0"})
+-- Top Bar with Logo
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 60)
+TopBar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+TopBar.Parent = MainFrame
 
-local KeyInput = Tab:CreateInput({
-    Name = "Enter Key",
-    PlaceholderText = "PHANTOM-XXXXXX",
-    Callback = function(Text) _G.Key = Text end
-})
+local Logo = Instance.new("ImageLabel")
+Logo.Size = UDim2.new(0, 50, 0, 50)
+Logo.Position = UDim2.new(0, 10, 0, 5)
+Logo.BackgroundTransparency = 1
+Logo.Image = "https://i.imgur.com/YOUR_PHANTOM_LOGO.png"  -- replace with your logo link
+Logo.Parent = TopBar
 
-Tab:CreateButton({
-    Name = "Submit Key & Load",
-    Callback = function()
-        if not _G.Key or not _G.Key:find("^PHANTOM%-") then
-            Rayfield:Notify({Title = "Error", Content = "Invalid Key", Duration = 5})
-            return
-        end
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -70, 1, 0)
+Title.Position = UDim2.new(0, 70, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "PHANTOM HACK"
+Title.TextColor3 = Color3.fromRGB(255, 0, 0)
+Title.TextScaled = true
+Title.Font = Enum.Font.GothamBlack
+Title.Parent = TopBar
 
-        Rayfield:Notify({Title = "Success", Content = "Key Accepted - Phantom Hack by Oreo Loaded", Duration = 4})
+-- Key Input
+local KeyBox = Instance.new("TextBox")
+KeyBox.Size = UDim2.new(0.8, 0, 0, 50)
+KeyBox.Position = UDim2.new(0.1, 0, 0.3, 0)
+KeyBox.PlaceholderText = "Enter Key (PHANTOM-XXXX)"
+KeyBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+KeyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+KeyBox.Parent = MainFrame
 
-        -- Log Player + Executor
-        print("PHANTOM EXECUTION LOG")
-        print("Player: " .. game.Players.LocalPlayer.Name)
-        print("UserId: " .. game.Players.LocalPlayer.UserId)
-        print("Executor: " .. (identifyexecutor and identifyexecutor() or "Unknown"))
-        print("Version: V1.0")
+local Submit = Instance.new("TextButton")
+Submit.Size = UDim2.new(0.8, 0, 0, 50)
+Submit.Position = UDim2.new(0.1, 0, 0.55, 0)
+Submit.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+Submit.Text = "SUBMIT KEY"
+Submit.TextColor3 = Color3.fromRGB(255, 255, 255)
+Submit.Font = Enum.Font.GothamBold
+Submit.Parent = MainFrame
 
-        -- Features
+-- Dark/Light Toggle
+local ThemeToggle = Instance.new("TextButton")
+ThemeToggle.Size = UDim2.new(0.8, 0, 0, 40)
+ThemeToggle.Position = UDim2.new(0.1, 0, 0.75, 0)
+ThemeToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ThemeToggle.Text = "Switch to Light Mode"
+ThemeToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+ThemeToggle.Parent = MainFrame
+
+local isDark = true
+ThemeToggle.MouseButton1Click:Connect(function()
+    isDark = not isDark
+    if isDark then
+        MainFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+        ThemeToggle.Text = "Switch to Light Mode"
+    else
+        MainFrame.BackgroundColor3 = Color3.fromRGB(240,240,240)
+        ThemeToggle.Text = "Switch to Dark Mode"
+    end
+end)
+
+Submit.MouseButton1Click:Connect(function()
+    if KeyBox.Text:find("^PHANTOM%-") then
+        Submit.Text = "LOADING..."
+        wait(1)
+        print("PHANTOM HACK BY OREO LOADED | Player: " .. player.Name)
+        -- ESP
         for _, plr in pairs(game.Players:GetPlayers()) do
-            if plr ~= game.Players.LocalPlayer and plr.Character then
-                local box = Instance.new("BoxHandleAdornment")
+            if plr ~= player and plr.Character then
+                local box = Instance.new("BoxHandleAdornment", plr.Character)
                 box.Adornee = plr.Character.HumanoidRootPart
                 box.Size = Vector3.new(4,6,4)
                 box.Transparency = 0.5
                 box.Color3 = Color3.new(0,1,1)
                 box.AlwaysOnTop = true
-                box.Parent = plr.Character
             end
         end
+        ScreenGui:Destroy()
+    else
+        Submit.Text = "INVALID KEY"
     end
-})
+end)
 
-Tab:CreateToggle({
-    Name = "Dark / Light Mode",
-    CurrentValue = true,
-    Callback = function(Value)
-        if Value then Window:ChangeTheme("Dark") else Window:ChangeTheme("Light") end
-    end
-})
-
-Rayfield:Notify({Title = "Phantom Hack by Oreo", Content = "V1.0 Loaded - Enter key", Duration = 6})
+print("Phantom Custom GUI by Oreo Loaded")
