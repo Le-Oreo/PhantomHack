@@ -34,14 +34,31 @@ local CoreGui          = game:GetService("CoreGui")
 local LP               = Players.LocalPlayer
 
 --==[ EXECUTOR DETECT ]==--
+-- Always try the built-in name functions FIRST — they are the most accurate.
+-- Only fall back to checking globals if those functions don't exist.
 local function getExec()
-    if syn                 then return "Synapse X"
-    elseif KRNL_LOADED     then return "Krnl"
-    elseif getcustomasset  then return "Fluxus"
-    elseif DELTA_LOADED    then return "Delta"
-    elseif identifyexecutor then local ok,n=pcall(identifyexecutor);if ok then return n end
-    elseif getexecutorname  then local ok,n=pcall(getexecutorname); if ok then return n end
+    -- Best method: executor exposes its own name
+    if identifyexecutor then
+        local ok, n = pcall(identifyexecutor)
+        if ok and n and n ~= "" then return tostring(n) end
     end
+    if getexecutorname then
+        local ok, n = pcall(getexecutorname)
+        if ok and n and n ~= "" then return tostring(n) end
+    end
+    -- Fallback: unique globals that only exist in ONE executor
+    if KRNL_LOADED                        then return "Krnl"       end
+    if DELTA_LOADED                        then return "Delta"      end
+    if syn and syn.request                 then return "Synapse X"  end
+    if typeof(Drawing) == "table"
+       and Drawing.new and not KRNL_LOADED then
+        -- Fluxus-specific: has fluxus global
+        if fluxus                          then return "Fluxus"     end
+    end
+    if pebc_execute                        then return "Electron"   end
+    if SELINENINJA                         then return "Seline"     end
+    if gethui and not syn                  then return "Comet"      end
+    -- Nothing matched — just say Unknown rather than guess wrong
     return "Unknown"
 end
 local ExecName = getExec()
