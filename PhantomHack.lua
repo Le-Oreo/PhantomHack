@@ -1,12 +1,29 @@
 --[[
-    ██████╗ ██╗  ██╗ █████╗ ███╗   ██╗████████╗ ██████╗ ███╗   ███╗
-    ██╔══██╗██║  ██║██╔══██╗████╗  ██║╚══██╔══╝██╔═══██╗████╗ ████║
-    ██████╔╝███████║███████║██╔██╗ ██║   ██║   ██║   ██║██╔████╔██║
-    ██╔═══╝ ██╔══██║██╔══██║██║╚██╗██║   ██║   ██║   ██║██║╚██╔╝██║
-    ██║     ██║  ██║██║  ██║██║ ╚████║   ██║   ╚██████╔╝██║ ╚═╝ ██║
-    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝     ╚═╝
-                         H A C K  —  Template GUI
-                              by PhantomHack
+    PHANTOM HACK — GUI Template v1.0.2
+    
+    ╔══════════════════════════════════════════════════════╗
+    ║  HOW TO USE THIS AS A TEMPLATE (like Rayfield)       ║
+    ║                                                      ║
+    ║  Step 1: Push this file to GitHub as PhantomHack.lua ║
+    ║                                                      ║
+    ║  Step 2: In your SEPARATE script (e.g. Core.lua):    ║
+    ║                                                      ║
+    ║    local PH = loadstring(game:HttpGet(               ║
+    ║      "https://raw.githubusercontent.com/             ║
+    ║       Le-Oreo/PhantomHack/main/PhantomHack.lua"      ║
+    ║    ))()                                              ║
+    ║                                                      ║
+    ║    -- Add a tab:                                     ║
+    ║    local Combat = PH:Tab("Combat", "⚔")             ║
+    ║    Combat:Toggle("Kill Aura", false, function(on)    ║
+    ║        -- your code                                  ║
+    ║    end)                                              ║
+    ║    Combat:Slider("Speed", 0, 100, 16, function(v)    ║
+    ║        -- your code                                  ║
+    ║    end)                                              ║
+    ║                                                      ║
+    ║  PH exposes: Tab(), Notify(), Config                 ║
+    ╚══════════════════════════════════════════════════════╝
 --]]
 
 --==[ SERVICES ]==--
@@ -14,209 +31,145 @@ local Players          = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService     = game:GetService("TweenService")
 local CoreGui          = game:GetService("CoreGui")
-local RunService       = game:GetService("RunService")
+local LP               = Players.LocalPlayer
 
-local LocalPlayer = Players.LocalPlayer
+--==[ EXECUTOR DETECT ]==--
+local function getExec()
+    if syn                 then return "Synapse X"
+    elseif KRNL_LOADED     then return "Krnl"
+    elseif getcustomasset  then return "Fluxus"
+    elseif DELTA_LOADED    then return "Delta"
+    elseif identifyexecutor then local ok,n=pcall(identifyexecutor);if ok then return n end
+    elseif getexecutorname  then local ok,n=pcall(getexecutorname); if ok then return n end
+    end
+    return "Unknown"
+end
+local ExecName = getExec()
 
---==[ CONFIG ]==--
-local Config = {
-    HubName    = "PHANTOM HACK",
-    HubVersion = "v1.0.0",
-    ValidKeys  = { "PHANTOM-PREMIUM-2026", "PHANTOM-FREE-TRIAL", "PHANTOM-VIP" },
-    KeyLink    = "https://phantom.hack/getkey",
-    Discord    = "https://discord.gg/phantomhack",
-
-    -- Phantom color palette (red/white/dark)
-    Accent       = Color3.fromRGB(220, 30, 40),   -- phantom red
-    AccentHover  = Color3.fromRGB(180, 20, 28),
-    AccentSoft   = Color3.fromRGB(255, 60, 70),
-    Background   = Color3.fromRGB(10, 10, 12),
-    Sidebar      = Color3.fromRGB(14, 14, 17),
-    Surface      = Color3.fromRGB(20, 20, 24),
-    SurfaceHover = Color3.fromRGB(26, 26, 32),
-    Border       = Color3.fromRGB(38, 38, 48),
-    BorderHover  = Color3.fromRGB(60, 60, 75),
-    TextPrimary  = Color3.fromRGB(235, 235, 240),
-    TextSecondary= Color3.fromRGB(140, 140, 160),
-    TextMuted    = Color3.fromRGB(70, 70, 85),
-    Success      = Color3.fromRGB(60, 200, 110),
-    Danger       = Color3.fromRGB(220, 30, 40),
-    Warning      = Color3.fromRGB(255, 175, 50),
-
-    Font     = Enum.Font.GothamSemibold,
-    FontBold = Enum.Font.GothamBold,
-    FontReg  = Enum.Font.Gotham,
+--==[ THEME ]==--
+local C = {
+    Name      = "PHANTOM HACK",
+    Version   = "v1.0.2",
+    Keys      = {"PHANTOM-2026","PHANTOM-FREE","PHANTOM-VIP"},
+    KeyLink   = "https://raw.githubusercontent.com/Le-Oreo/PhantomHack/main/PhantomHack.lua",
     ToggleKey = Enum.KeyCode.RightShift,
 
-    W  = 880,
-    H  = 570,
-    SW = 195,
-    TH = 54,
+    -- Core palette — NO colored stripes anywhere
+    Accent   = Color3.fromRGB(215, 35,  35),   -- used ONLY for logo box, avatar ring, toggles, active tab bar
+    AccentH  = Color3.fromRGB(175, 20,  20),
+    AccentDim= Color3.fromRGB(55,  8,   8),
+    BG       = Color3.fromRGB(11,  11,  14),
+    Side     = Color3.fromRGB(15,  15,  19),
+    Surf     = Color3.fromRGB(21,  21,  27),
+    SurfH    = Color3.fromRGB(27,  27,  34),
+    Bdr      = Color3.fromRGB(38,  38,  50),
+    BdrH     = Color3.fromRGB(58,  58,  75),
+    T1       = Color3.fromRGB(232, 232, 238),
+    T2       = Color3.fromRGB(125, 125, 148),
+    TM       = Color3.fromRGB(60,  60,  78),
+    Ok       = Color3.fromRGB(55,  195, 115),
+    Bad      = Color3.fromRGB(215, 35,  35),
+    Warn     = Color3.fromRGB(235, 160, 40),
+    Info     = Color3.fromRGB(55,  135, 240),
+
+    Font  = Enum.Font.GothamSemibold,
+    FontB = Enum.Font.GothamBold,
+    FontR = Enum.Font.Gotham,
+
+    W=880, H=560, SW=195, TH=52,
 }
 
--- Live accent (can be changed at runtime)
-local LiveAccent = Config.Accent
-
-local function GetAccent() return LiveAccent end
-local function SetAccent(c)
-    LiveAccent = c
-    Config.Accent = c
-end
+local AccentPresets = {
+    Red    = {Color3.fromRGB(215,35,35),  Color3.fromRGB(175,20,20)},
+    Blue   = {Color3.fromRGB(60,130,255), Color3.fromRGB(40,100,220)},
+    Purple = {Color3.fromRGB(145,75,255), Color3.fromRGB(115,50,210)},
+    Green  = {Color3.fromRGB(50,195,110), Color3.fromRGB(35,155,80)},
+    Orange = {Color3.fromRGB(235,125,30), Color3.fromRGB(195,95,20)},
+    Pink   = {Color3.fromRGB(235,65,165), Color3.fromRGB(195,45,135)},
+    Cyan   = {Color3.fromRGB(30,195,215), Color3.fromRGB(20,155,175)},
+}
 
 --==[ UTILS ]==--
-local function tw(obj, t, props, s, d)
-    if not obj or not obj.Parent then return end
-    TweenService:Create(obj, TweenInfo.new(t or 0.2,
-        s or Enum.EasingStyle.Quart, d or Enum.EasingDirection.Out), props):Play()
+local function tw(o,t,p,s,d)
+    if not o or not o.Parent then return end
+    TweenService:Create(o,TweenInfo.new(
+        t or .2, s or Enum.EasingStyle.Quart, d or Enum.EasingDirection.Out
+    ),p):Play()
 end
 
-local function new(cls, props, kids)
+local function inst(cls,props,kids)
     local i = Instance.new(cls)
     for k,v in pairs(props or {}) do i[k]=v end
     for _,c in ipairs(kids or {}) do c.Parent=i end
     return i
 end
 
-local function rnd(r)
-    return new("UICorner",{CornerRadius=UDim.new(0,r or 8)})
-end
-
-local function bdr(col,th)
-    return new("UIStroke",{
-        Color=col or Config.Border, Thickness=th or 1,
-        ApplyStrokeMode=Enum.ApplyStrokeMode.Border
-    })
-end
-
-local function pad(t,b,l,r)
-    return new("UIPadding",{
-        PaddingTop=UDim.new(0,t or 0), PaddingBottom=UDim.new(0,b or 0),
-        PaddingLeft=UDim.new(0,l or 0), PaddingRight=UDim.new(0,r or 0),
-    })
-end
-
--- Detect executor
-local function GetExecutor()
-    if syn then return "Synapse X"
-    elseif KRNL_LOADED then return "KRNL"
-    elseif identifyexecutor then return identifyexecutor()
-    elseif fluxus then return "Fluxus"
-    elseif getexecutorname then return getexecutorname()
-    else return "Unknown" end
-end
-
--- Get avatar URL
-local function GetAvatarUrl(userId)
-    local ok, res = pcall(function()
-        return game:GetService("Players"):GetUserThumbnailAsync(
-            userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
-    end)
-    return ok and res or nil
-end
+local function crn(r)  return inst("UICorner",{CornerRadius=UDim.new(0,r or 8)}) end
+local function bdr(col,th) return inst("UIStroke",{Color=col or C.Bdr,Thickness=th or 1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border}) end
+local function pad(t,b,l,r) return inst("UIPadding",{PaddingTop=UDim.new(0,t or 0),PaddingBottom=UDim.new(0,b or 0),PaddingLeft=UDim.new(0,l or 0),PaddingRight=UDim.new(0,r or 0)}) end
 
 --==[ CLEANUP ]==--
-pcall(function()
-    if CoreGui:FindFirstChild("PhantomHack") then CoreGui.PhantomHack:Destroy() end
-end)
+pcall(function() if CoreGui:FindFirstChild("PhantomHack") then CoreGui.PhantomHack:Destroy() end end)
 
---==[ SCREENGUI ]==--
-local Gui = new("ScreenGui",{
-    Name="PhantomHack", ResetOnSpawn=false,
-    ZIndexBehavior=Enum.ZIndexBehavior.Sibling, IgnoreGuiInset=true,
-})
+--==[ ROOT GUI ]==--
+local Gui = inst("ScreenGui",{Name="PhantomHack",ResetOnSpawn=false,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,IgnoreGuiInset=true})
 pcall(function()
-    if syn and syn.protect_gui then syn.protect_gui(Gui); Gui.Parent=CoreGui
+    if syn and syn.protect_gui then syn.protect_gui(Gui);Gui.Parent=CoreGui
     elseif gethui then Gui.Parent=gethui()
     else Gui.Parent=CoreGui end
 end)
-if not Gui.Parent then Gui.Parent=LocalPlayer:WaitForChild("PlayerGui") end
+if not Gui.Parent then Gui.Parent=LP:WaitForChild("PlayerGui") end
 
---==[ NOTIFICATION SYSTEM ]==--
-local NH = new("Frame",{
-    AnchorPoint=Vector2.new(1,1),
-    Position=UDim2.new(1,-16,1,-16),
-    Size=UDim2.new(0,280,1,0),
-    BackgroundTransparency=1, Parent=Gui,
-},{
-    new("UIListLayout",{
-        SortOrder=Enum.SortOrder.LayoutOrder,
-        VerticalAlignment=Enum.VerticalAlignment.Bottom,
-        HorizontalAlignment=Enum.HorizontalAlignment.Right,
-        Padding=UDim.new(0,7),
-    })
-})
+--=======================================================--
+--                  NOTIFICATIONS                        --
+--=======================================================--
+local NH = inst("Frame",{
+    Name="NH",AnchorPoint=Vector2.new(1,1),
+    Position=UDim2.new(1,-14,1,-14),
+    Size=UDim2.new(0,295,1,0),
+    BackgroundTransparency=1,Parent=Gui,
+},{inst("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Bottom,HorizontalAlignment=Enum.HorizontalAlignment.Right,Padding=UDim.new(0,7)})})
 
-local function Notify(title, msg, dur, kind)
+local function Notify(title,msg,dur,kind)
     dur = dur or 4
-    local ac = (kind=="error" and Config.Danger)
-            or (kind=="success" and Config.Success)
-            or (kind=="warning" and Config.Warning)
-            or GetAccent()
+    local ac = (kind=="error" and C.Bad) or (kind=="success" and C.Ok) or (kind=="warning" and C.Warn) or (kind=="info" and C.Info) or C.Accent
 
-    local n = new("Frame",{
-        Size=UDim2.new(1,0,0,58),
-        BackgroundColor3=Config.Surface,
-        BackgroundTransparency=1,
-        BorderSizePixel=0,
-        ClipsDescendants=true,
-    },{rnd(9), bdr(Config.Border)})
-    n.Parent = NH
+    local wrap = inst("Frame",{Size=UDim2.new(1,0,0,56),BackgroundTransparency=1,Parent=NH})
+    local card = inst("Frame",{
+        Size=UDim2.new(1,0,1,0),Position=UDim2.new(1,10,0,0),
+        BackgroundColor3=C.Surf,BorderSizePixel=0,Parent=wrap,
+    },{crn(10),bdr(C.Bdr)})
 
-    -- left accent stripe
-    new("Frame",{
-        Size=UDim2.new(0,3,0,32),
-        Position=UDim2.new(0,0,0.5,0), AnchorPoint=Vector2.new(0,0.5),
-        BackgroundColor3=ac, BorderSizePixel=0, Parent=n,
-    },{rnd(2)})
+    -- Small left accent mark (inside card, not a full bar)
+    inst("Frame",{Size=UDim2.new(0,3,0,28),Position=UDim2.new(0,0,0.5,0),AnchorPoint=Vector2.new(0,0.5),BackgroundColor3=ac,BorderSizePixel=0,Parent=card},{crn(2)})
+    inst("TextLabel",{Position=UDim2.new(0,14,0,10),Size=UDim2.new(1,-28,0,16),BackgroundTransparency=1,Text=title,TextColor3=C.T1,Font=C.FontB,TextSize=13,TextXAlignment=Enum.TextXAlignment.Left,Parent=card})
+    inst("TextLabel",{Position=UDim2.new(0,14,0,27),Size=UDim2.new(1,-28,0,14),BackgroundTransparency=1,Text=msg,TextColor3=C.T2,Font=C.FontR,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,TextWrapped=true,Parent=card})
 
-    local titleL = new("TextLabel",{
-        Position=UDim2.new(0,14,0,10), Size=UDim2.new(1,-24,0,17),
-        BackgroundTransparency=1, Text=title,
-        TextColor3=Config.TextPrimary, Font=Config.FontBold, TextSize=13,
-        TextXAlignment=Enum.TextXAlignment.Left,
-        TextTransparency=1, Parent=n,
-    })
-    local msgL = new("TextLabel",{
-        Position=UDim2.new(0,14,0,29), Size=UDim2.new(1,-24,0,14),
-        BackgroundTransparency=1, Text=msg,
-        TextColor3=Config.TextSecondary, Font=Config.FontReg, TextSize=11,
-        TextXAlignment=Enum.TextXAlignment.Left, TextWrapped=true,
-        TextTransparency=1, Parent=n,
-    })
+    -- Progress bar (bottom of card)
+    local prog = inst("Frame",{Position=UDim2.new(0,0,1,-3),Size=UDim2.new(1,0,0,3),BackgroundColor3=ac,BorderSizePixel=0,Parent=card})
+    inst("UICorner",{CornerRadius=UDim.new(0,0),Parent=prog})
 
     -- Slide in from right
-    n.Position = UDim2.new(1,10,0,0)
-    tw(n, 0.28, {BackgroundTransparency=0})
-    tw(n, 0.28, {Position=UDim2.new(0,0,0,0)})
-    tw(titleL, 0.28, {TextTransparency=0})
-    tw(msgL, 0.28, {TextTransparency=0})
-
-    task.delay(dur, function()
-        if not n or not n.Parent then return end
-        -- Slide out right cleanly
-        tw(n, 0.22, {Position=UDim2.new(1,14,0,0)})
-        tw(n, 0.22, {BackgroundTransparency=1})
-        tw(titleL, 0.18, {TextTransparency=1})
-        tw(msgL, 0.18, {TextTransparency=1})
-        task.wait(0.25)
-        if n and n.Parent then n:Destroy() end
+    tw(card,.28,{Position=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+    task.delay(.05,function() tw(prog,dur-.3,{Size=UDim2.new(0,0,0,3)},Enum.EasingStyle.Linear) end)
+    task.delay(dur-.25,function()
+        tw(card,.22,{Position=UDim2.new(1,10,0,0)},Enum.EasingStyle.Quart,Enum.EasingDirection.In)
+        task.wait(.25); wrap:Destroy()
     end)
 end
 
 --==[ DRAG ]==--
-local function drag(frame, handle)
-    handle = handle or frame
-    local dragging, ds, sp
+local function drag(frame,handle)
+    handle=handle or frame
+    local dg,ds,sp
     handle.InputBegan:Connect(function(i)
         if i.UserInputType==Enum.UserInputType.MouseButton1 then
-            dragging=true; ds=i.Position; sp=frame.Position
-            i.Changed:Connect(function()
-                if i.UserInputState==Enum.UserInputState.End then dragging=false end
-            end)
+            dg=true;ds=i.Position;sp=frame.Position
+            i.Changed:Connect(function() if i.UserInputState==Enum.UserInputState.End then dg=false end end)
         end
     end)
     UserInputService.InputChanged:Connect(function(i)
-        if dragging and i.UserInputType==Enum.UserInputType.MouseMovement then
+        if dg and i.UserInputType==Enum.UserInputType.MouseMovement then
             local d=i.Position-ds
             frame.Position=UDim2.new(sp.X.Scale,sp.X.Offset+d.X,sp.Y.Scale,sp.Y.Offset+d.Y)
         end
@@ -224,1248 +177,523 @@ local function drag(frame, handle)
 end
 
 --=======================================================--
---                     KEY SYSTEM                        --
+--                    KEY SYSTEM                         --
+-- Clean card, NO colored bars anywhere on the outside   --
 --=======================================================--
-local KF = new("Frame",{
-    Name="KeySystem", AnchorPoint=Vector2.new(0.5,0.5),
-    Position=UDim2.new(0.5,0,0.5,0), Size=UDim2.new(0,440,0,220),
-    BackgroundColor3=Config.Background, BorderSizePixel=0, Parent=Gui,
-},{rnd(12), bdr(Config.Border)})
+local KF = inst("Frame",{
+    Name="KeySystem",AnchorPoint=Vector2.new(.5,.5),
+    Position=UDim2.new(.5,0,.5,0),Size=UDim2.new(0,440,0,215),
+    BackgroundColor3=C.BG,BorderSizePixel=0,Parent=Gui,
+},{crn(12),bdr(C.Bdr)})
+-- NO red bar — just the rounded dark card
 
--- Red top accent bar
-new("Frame",{
-    Size=UDim2.new(1,0,0,3),
-    BackgroundColor3=Config.Accent, BorderSizePixel=0, Parent=KF,
-},{rnd(12)})
--- mask bottom radius of accent bar
-new("Frame",{
-    Position=UDim2.new(0,0,0,1), Size=UDim2.new(1,0,0,2),
-    BackgroundColor3=Config.Accent, BorderSizePixel=0, Parent=KF,
-})
+-- Logo box (the only red element on the key screen)
+local kLogo = inst("Frame",{
+    Position=UDim2.new(0,18,0,18),Size=UDim2.new(0,32,0,32),
+    BackgroundColor3=C.Accent,BorderSizePixel=0,Parent=KF,
+},{crn(8)})
+inst("TextLabel",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="P",TextColor3=Color3.new(1,1,1),Font=C.FontB,TextSize=18,Parent=kLogo})
 
--- Logo area
-new("Frame",{
-    Position=UDim2.new(0,18,0,18), Size=UDim2.new(0,34,0,34),
-    BackgroundColor3=Config.Accent, BorderSizePixel=0, Parent=KF,
-},{
-    rnd(9),
-    new("TextLabel",{
-        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
-        Text="P", TextColor3=Color3.new(1,1,1), Font=Config.FontBold, TextSize=19,
-    })
-})
+inst("TextLabel",{Position=UDim2.new(0,58,0,15),Size=UDim2.new(1,-70,0,18),BackgroundTransparency=1,Text=C.Name,TextColor3=C.T1,Font=C.FontB,TextSize=16,TextXAlignment=Enum.TextXAlignment.Left,Parent=KF})
+inst("TextLabel",{Position=UDim2.new(0,58,0,34),Size=UDim2.new(1,-70,0,13),BackgroundTransparency=1,Text="Authentication Required  •  "..C.Version,TextColor3=C.T2,Font=C.FontR,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,Parent=KF})
 
-new("TextLabel",{
-    Position=UDim2.new(0,60,0,15), Size=UDim2.new(1,-80,0,18),
-    BackgroundTransparency=1, Text=Config.HubName,
-    TextColor3=Config.TextPrimary, Font=Config.FontBold, TextSize=16,
-    TextXAlignment=Enum.TextXAlignment.Left, Parent=KF,
-})
-new("TextLabel",{
-    Position=UDim2.new(0,60,0,34), Size=UDim2.new(1,-80,0,13),
-    BackgroundTransparency=1, Text="Authentication Required  •  "..Config.HubVersion,
-    TextColor3=Config.TextSecondary, Font=Config.FontReg, TextSize=11,
-    TextXAlignment=Enum.TextXAlignment.Left, Parent=KF,
-})
+-- Divider
+inst("Frame",{Position=UDim2.new(0,0,0,60),Size=UDim2.new(1,0,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=KF})
 
-new("Frame",{
-    Position=UDim2.new(0,0,0,60), Size=UDim2.new(1,0,0,1),
-    BackgroundColor3=Config.Border, BorderSizePixel=0, Parent=KF,
-})
+-- Key input
+local KBox = inst("Frame",{Position=UDim2.new(0,18,0,72),Size=UDim2.new(1,-36,0,40),BackgroundColor3=C.Surf,BorderSizePixel=0,Parent=KF},{crn(8),bdr(C.Bdr)})
+local KIn  = inst("TextBox",{Size=UDim2.new(1,-16,1,0),Position=UDim2.new(0,12,0,0),BackgroundTransparency=1,PlaceholderText="Enter your license key...",PlaceholderColor3=C.TM,Text="",TextColor3=C.T1,Font=C.FontR,TextSize=13,TextXAlignment=Enum.TextXAlignment.Left,ClearTextOnFocus=false,Parent=KBox})
+local KStr = KBox:FindFirstChildOfClass("UIStroke")
+KIn.Focused:Connect(function() tw(KStr,.15,{Color=C.Accent}) end)
+KIn.FocusLost:Connect(function() tw(KStr,.15,{Color=C.Bdr}) end)
 
--- Input
-local KBox = new("Frame",{
-    Position=UDim2.new(0,18,0,74), Size=UDim2.new(1,-36,0,40),
-    BackgroundColor3=Config.Surface, BorderSizePixel=0, Parent=KF,
-},{rnd(8), bdr(Config.Border)})
-
-local KInput = new("TextBox",{
-    Size=UDim2.new(1,-16,1,0), Position=UDim2.new(0,12,0,0),
-    BackgroundTransparency=1, PlaceholderText="Enter license key...",
-    PlaceholderColor3=Config.TextMuted, Text="",
-    TextColor3=Config.TextPrimary, Font=Config.FontReg, TextSize=13,
-    TextXAlignment=Enum.TextXAlignment.Left, ClearTextOnFocus=false, Parent=KBox,
-})
-local KS = KBox:FindFirstChildOfClass("UIStroke")
-KInput.Focused:Connect(function() tw(KS,0.15,{Color=GetAccent()}) end)
-KInput.FocusLost:Connect(function() tw(KS,0.15,{Color=Config.Border}) end)
-
-local function mkKBtn(lbl, x, w, primary)
-    local b = new("TextButton",{
-        Position=UDim2.new(0,x,0,130), Size=UDim2.new(0,w,0,38),
-        BackgroundColor3=primary and Config.Accent or Config.Surface,
-        BorderSizePixel=0, Text=lbl, TextColor3=Color3.new(1,1,1),
-        Font=Config.Font, TextSize=13, AutoButtonColor=false, Parent=KF,
-    },{rnd(8), bdr(primary and Config.Accent or Config.Border)})
-    b.MouseEnter:Connect(function()
-        tw(b,0.12,{BackgroundColor3=primary and Config.AccentHover or Config.SurfaceHover})
-    end)
-    b.MouseLeave:Connect(function()
-        tw(b,0.12,{BackgroundColor3=primary and Config.Accent or Config.Surface})
-    end)
+-- Buttons
+local function mkKBtn(lbl,x,w,primary)
+    local b=inst("TextButton",{Position=UDim2.new(0,x,0,126),Size=UDim2.new(0,w,0,38),BackgroundColor3=primary and C.Accent or C.Surf,BorderSizePixel=0,Text=lbl,TextColor3=C.T1,Font=C.Font,TextSize=12,AutoButtonColor=false,Parent=KF},{crn(8),bdr(primary and C.Accent or C.Bdr)})
+    b.MouseEnter:Connect(function() tw(b,.12,{BackgroundColor3=primary and C.AccentH or C.SurfH}) end)
+    b.MouseLeave:Connect(function() tw(b,.12,{BackgroundColor3=primary and C.Accent or C.Surf}) end)
     return b
 end
+local GKBtn = mkKBtn("Get Key",   18, 185, false)
+local ABtn  = mkKBtn("Authorize", 211,211, true)
 
-local GetKeyBtn = mkKBtn("Get Key",   18, 182, false)
-local AuthBtn   = mkKBtn("Authorize", 208, 214, true)
-
-local KStatus = new("TextLabel",{
-    Position=UDim2.new(0,0,1,-20), Size=UDim2.new(1,0,0,14),
-    BackgroundTransparency=1, Text="© 2026 Phantom Hack",
-    TextColor3=Config.TextMuted, Font=Config.FontReg, TextSize=10, Parent=KF,
-})
+local KStat = inst("TextLabel",{Position=UDim2.new(0,0,1,-20),Size=UDim2.new(1,0,0,13),BackgroundTransparency=1,Text="© 2026 Phantom Hack",TextColor3=C.TM,Font=C.FontR,TextSize=10,Parent=KF})
 
 drag(KF)
-
-GetKeyBtn.MouseButton1Click:Connect(function()
-    pcall(function() if setclipboard then setclipboard(Config.KeyLink) end end)
-    Notify("Link Copied","Key link copied to clipboard.",3,"success")
+GKBtn.MouseButton1Click:Connect(function()
+    pcall(function() if setclipboard then setclipboard(C.KeyLink) end end)
+    Notify("Key Link","URL copied to clipboard.",3,"success")
 end)
 
 --=======================================================--
---                     MAIN MENU                         --
+--                    MAIN MENU                          --
 --=======================================================--
+local Main, ActiveTab
+local AllTabs  = {}
+local Keybinds = {}
 local BuildMain
 
-AuthBtn.MouseButton1Click:Connect(function()
-    local entered = KInput.Text
-    local valid = false
-    for _,k in ipairs(Config.ValidKeys) do if entered==k then valid=true; break end end
-    if valid then
-        KStatus.Text="✓ Authenticated — loading menu..."
-        KStatus.TextColor3=Config.Success
-        Notify("Welcome","Key accepted. Loading Phantom Hack...","3","success")
-        tw(KF,0.3,{Size=UDim2.new(0,440,0,0),BackgroundTransparency=1})
-        task.wait(0.35); KF:Destroy(); BuildMain()
+ABtn.MouseButton1Click:Connect(function()
+    local e=KIn.Text; local ok=false
+    for _,k in ipairs(C.Keys) do if e==k then ok=true;break end end
+    if ok then
+        KStat.Text="✓ Authenticated"; KStat.TextColor3=C.Ok
+        Notify("Welcome","Launching Phantom Hack...",3,"success")
+        tw(KF,.3,{Size=UDim2.new(0,440,0,0),BackgroundTransparency=1})
+        task.wait(.35); KF:Destroy(); BuildMain()
     else
-        KStatus.Text="✗ Invalid key — please try again."
-        KStatus.TextColor3=Config.Danger
-        Notify("Auth Failed","The key you entered is invalid.",3,"error")
-        tw(KS,0.1,{Color=Config.Danger})
+        KStat.Text="✗ Invalid key."; KStat.TextColor3=C.Bad
+        Notify("Auth Failed","The key entered is invalid.",3,"error")
+        tw(KStr,.1,{Color=C.Bad})
         local op=KBox.Position
-        for i=1,5 do
-            tw(KBox,0.04,{Position=op+UDim2.fromOffset((i%2==0) and -7 or 7,0)})
-            task.wait(0.045)
-        end
+        for i=1,5 do tw(KBox,.04,{Position=op+UDim2.fromOffset(i%2==0 and -7 or 7,0)});task.wait(.045) end
         KBox.Position=op
-        task.delay(1.5,function() tw(KS,0.2,{Color=Config.Border}) end)
+        task.delay(1.5,function() tw(KStr,.2,{Color=C.Bdr}) end)
     end
 end)
 
 --=======================================================--
-function BuildMain()
+-- Tab() and component builders — used by BuildMain AND  --
+-- by external scripts via the returned API              --
+--=======================================================--
+local SideScroll, CA  -- filled inside BuildMain
 
-    -- Keybind storage
-    local Keybinds = {}
-    local ListeningFor = nil
+local function MakeTab(name, icon)
+    local btn=inst("TextButton",{
+        Size=UDim2.new(1,0,0,36),BackgroundColor3=C.SurfH,BackgroundTransparency=1,
+        BorderSizePixel=0,Text="",AutoButtonColor=false,Parent=SideScroll,
+    },{crn(7)})
 
-    local Main = new("Frame",{
-        Name="Main", AnchorPoint=Vector2.new(0.5,0.5),
-        Position=UDim2.new(0.5,0,0.5,0), Size=UDim2.new(0,0,0,0),
-        BackgroundColor3=Config.Background, BorderSizePixel=0,
-        ClipsDescendants=true, Parent=Gui,
-    },{rnd(12), bdr(Config.Border)})
+    -- Left accent bar — the ONLY red stripe, and it's inside the sidebar button
+    local bar=inst("Frame",{
+        Position=UDim2.new(0,0,0.5,0),AnchorPoint=Vector2.new(0,0.5),
+        Size=UDim2.new(0,3,0,20),BackgroundColor3=C.Accent,
+        BorderSizePixel=0,Visible=false,Parent=btn,
+    },{crn(2)})
 
-    tw(Main,0.45,{Size=UDim2.new(0,Config.W,0,Config.H)},
-        Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+    local ico=inst("TextLabel",{Position=UDim2.new(0,10,0.5,0),AnchorPoint=Vector2.new(0,0.5),Size=UDim2.new(0,20,0,20),BackgroundTransparency=1,Text=icon or "•",TextColor3=C.TM,Font=C.FontB,TextSize=14,Parent=btn})
+    local lbl=inst("TextLabel",{Position=UDim2.new(0,34,0,0),Size=UDim2.new(1,-38,1,0),BackgroundTransparency=1,Text=name,TextColor3=C.T2,Font=C.Font,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,Parent=btn})
 
-    --==[ TOPBAR ]==--
-    local TopBar = new("Frame",{
-        Name="TopBar",
-        Size=UDim2.new(1,0,0,Config.TH),
-        BackgroundColor3=Config.Sidebar, BorderSizePixel=0, Parent=Main,
-    },{rnd(12)})
-    -- square off bottom corners
-    new("Frame",{
-        Position=UDim2.new(0,0,1,-10), Size=UDim2.new(1,0,0,10),
-        BackgroundColor3=Config.Sidebar, BorderSizePixel=0, Parent=TopBar,
-    })
-    -- bottom border
-    new("Frame",{
-        Position=UDim2.new(0,0,1,0), AnchorPoint=Vector2.new(0,1),
-        Size=UDim2.new(1,0,0,1), BackgroundColor3=Config.Border,
-        BorderSizePixel=0, Parent=TopBar,
-    })
-
-    -- P logo
-    new("Frame",{
-        Position=UDim2.new(0,14,0.5,0), AnchorPoint=Vector2.new(0,0.5),
-        Size=UDim2.new(0,32,0,32), BackgroundColor3=GetAccent(),
-        BorderSizePixel=0, Parent=TopBar,
+    local page=inst("ScrollingFrame",{
+        Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,BorderSizePixel=0,
+        ScrollBarThickness=3,ScrollBarImageColor3=C.Accent,
+        CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y,
+        Visible=false,Parent=CA,
     },{
-        rnd(9),
-        new("TextLabel",{
-            Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
-            Text="P", TextColor3=Color3.new(1,1,1), Font=Config.FontBold, TextSize=18,
-        })
+        inst("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,6)}),
+        pad(16,16,16,16),
     })
 
-    new("TextLabel",{
-        Position=UDim2.new(0,54,0.5,-10), Size=UDim2.new(0,200,0,18),
-        BackgroundTransparency=1, Text=Config.HubName,
-        TextColor3=Config.TextPrimary, Font=Config.FontBold, TextSize=14,
-        TextXAlignment=Enum.TextXAlignment.Left, Parent=TopBar,
-    })
-    new("TextLabel",{
-        Position=UDim2.new(0,54,0.5,8), Size=UDim2.new(0,200,0,13),
-        BackgroundTransparency=1, Text=LocalPlayer.DisplayName,
-        TextColor3=Config.TextSecondary, Font=Config.FontReg, TextSize=11,
-        TextXAlignment=Enum.TextXAlignment.Left, Parent=TopBar,
-    })
+    local td={Btn=btn,Page=page,Lbl=lbl,Ico=ico,Bar=bar}
+    table.insert(AllTabs,td)
 
-    -- Sidebar divider in topbar
-    new("Frame",{
-        Position=UDim2.new(0,Config.SW,0,10), Size=UDim2.new(0,1,0,Config.TH-20),
-        BackgroundColor3=Config.Border, BorderSizePixel=0, Parent=TopBar,
-    })
-
-    -- Version badge
-    new("Frame",{
-        Position=UDim2.new(0,Config.SW+14,0.5,0), AnchorPoint=Vector2.new(0,0.5),
-        Size=UDim2.new(0,68,0,24), BackgroundColor3=Config.Surface,
-        BorderSizePixel=0, Parent=TopBar,
-    },{rnd(6), bdr(Config.Border),
-        new("TextLabel",{
-            Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
-            Text=Config.HubVersion, TextColor3=Config.TextSecondary,
-            Font=Config.FontReg, TextSize=11,
-        })
-    })
-
-    -- Executor badge
-    new("Frame",{
-        Position=UDim2.new(0,Config.SW+90,0.5,0), AnchorPoint=Vector2.new(0,0.5),
-        Size=UDim2.new(0,120,0,24), BackgroundColor3=Config.Surface,
-        BorderSizePixel=0, Parent=TopBar,
-    },{rnd(6), bdr(Config.Border),
-        new("TextLabel",{
-            Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
-            Text="⚙  "..GetExecutor(), TextColor3=Config.TextSecondary,
-            Font=Config.FontReg, TextSize=10,
-        })
-    })
-
-    -- Window controls
-    local function mkCtrl(sym, xOff, hoverCol)
-        local b = new("TextButton",{
-            AnchorPoint=Vector2.new(1,0.5),
-            Position=UDim2.new(1,xOff,0.5,0),
-            Size=UDim2.new(0,28,0,28),
-            BackgroundColor3=Config.Surface, BorderSizePixel=0,
-            Text=sym, TextColor3=Config.TextSecondary,
-            Font=Config.FontBold, TextSize=13, AutoButtonColor=false, Parent=TopBar,
-        },{rnd(7)})
-        b.MouseEnter:Connect(function()
-            tw(b,0.12,{BackgroundColor3=hoverCol,TextColor3=Color3.new(1,1,1)})
-        end)
-        b.MouseLeave:Connect(function()
-            tw(b,0.12,{BackgroundColor3=Config.Surface,TextColor3=Config.TextSecondary})
-        end)
-        return b
-    end
-
-    local BtnClose = mkCtrl("✕",-10,Config.Danger)
-    local BtnMin   = mkCtrl("–",-44,Config.Border)
-
-    local minimized = false
-    BtnMin.MouseButton1Click:Connect(function()
-        minimized = not minimized
-        if minimized then
-            -- Collapse to just user card width × topbar height
-            tw(Main,0.28,{Size=UDim2.new(0,Config.SW,0,Config.TH)})
-            BtnMin.Text="□"
-        else
-            tw(Main,0.35,{Size=UDim2.new(0,Config.W,0,Config.H)},
-                Enum.EasingStyle.Back,Enum.EasingDirection.Out)
-            BtnMin.Text="–"
-        end
-    end)
-
-    BtnClose.MouseButton1Click:Connect(function()
-        tw(Main,0.28,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In)
-        task.wait(0.3); Gui:Destroy()
-    end)
-
-    drag(Main,TopBar)
-
-    --==[ SIDEBAR BG ]==--
-    new("Frame",{
-        Position=UDim2.new(0,0,0,Config.TH),
-        Size=UDim2.new(0,Config.SW,1,-Config.TH),
-        BackgroundColor3=Config.Sidebar, BorderSizePixel=0, Parent=Main,
-    },{
-        new("Frame",{
-            Position=UDim2.new(1,0,0,0), AnchorPoint=Vector2.new(1,0),
-            Size=UDim2.new(0,1,1,0),
-            BackgroundColor3=Config.Border, BorderSizePixel=0,
-        })
-    })
-
-    --==[ SIDEBAR TAB LIST ]==--
-    local SideScroll = new("ScrollingFrame",{
-        Position=UDim2.new(0,0,0,Config.TH),
-        Size=UDim2.new(0,Config.SW,1,-(Config.TH+62)),
-        BackgroundTransparency=1, BorderSizePixel=0,
-        ScrollBarThickness=0,
-        CanvasSize=UDim2.new(0,0,0,0),
-        AutomaticCanvasSize=Enum.AutomaticSize.Y,
-        Parent=Main,
-    },{
-        new("UIListLayout",{
-            SortOrder=Enum.SortOrder.LayoutOrder,
-            Padding=UDim.new(0,3),
-        }),
-        pad(10,0,8,8),
-    })
-
-    --==[ CONTENT AREA ]==--
-    local ContentArea = new("Frame",{
-        Position=UDim2.new(0,Config.SW,0,Config.TH),
-        Size=UDim2.new(1,-Config.SW,1,-Config.TH),
-        BackgroundTransparency=1, Parent=Main,
-    })
-
-    --==[ USER CARD ]==--
-    local UserCard = new("Frame",{
-        Position=UDim2.new(0,0,1,-62),
-        Size=UDim2.new(0,Config.SW,0,62),
-        BackgroundColor3=Config.Sidebar, BorderSizePixel=0, Parent=Main,
-    },{rnd(12)})
-    -- mask top corners
-    new("Frame",{
-        Size=UDim2.new(1,0,0,10),
-        BackgroundColor3=Config.Sidebar, BorderSizePixel=0, Parent=UserCard,
-    })
-    new("Frame",{
-        Size=UDim2.new(1,0,0,1), BackgroundColor3=Config.Border,
-        BorderSizePixel=0, Parent=UserCard,
-    })
-    new("Frame",{
-        Position=UDim2.new(1,0,0,0), AnchorPoint=Vector2.new(1,0),
-        Size=UDim2.new(0,1,1,0), BackgroundColor3=Config.Border,
-        BorderSizePixel=0, Parent=UserCard,
-    })
-
-    -- Avatar image
-    local AvatarFrame = new("Frame",{
-        Position=UDim2.new(0,10,0.5,0), AnchorPoint=Vector2.new(0,0.5),
-        Size=UDim2.new(0,36,0,36), BackgroundColor3=GetAccent(),
-        BorderSizePixel=0, Parent=UserCard,
-    },{rnd(18)})
-
-    -- Try to load real Roblox avatar
-    local AvatarImg = new("ImageLabel",{
-        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
-        Image="", Parent=AvatarFrame,
-    },{rnd(18)})
-
-    local fallbackLbl = new("TextLabel",{
-        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
-        Text=string.upper(string.sub(LocalPlayer.Name,1,1)),
-        TextColor3=Color3.new(1,1,1), Font=Config.FontBold, TextSize=18,
-        Parent=AvatarFrame,
-    })
-
-    task.spawn(function()
-        local url = GetAvatarUrl(LocalPlayer.UserId)
-        if url then
-            AvatarImg.Image = url
-            fallbackLbl.Visible = false
-        end
-    end)
-
-    local nameLblCard = new("TextLabel",{
-        Position=UDim2.new(0,52,0,12), Size=UDim2.new(1,-70,0,17),
-        BackgroundTransparency=1, Text=LocalPlayer.Name,
-        TextColor3=Config.TextPrimary, Font=Config.Font, TextSize=12,
-        TextXAlignment=Enum.TextXAlignment.Left, Parent=UserCard,
-    })
-    new("TextLabel",{
-        Position=UDim2.new(0,52,0,30), Size=UDim2.new(1,-70,0,13),
-        BackgroundTransparency=1, Text="Premium | Lifetime",
-        TextColor3=GetAccent(), Font=Config.FontReg, TextSize=10,
-        TextXAlignment=Enum.TextXAlignment.Left, Parent=UserCard,
-    })
-
-    -- Profile button (opens profile page)
-    local profileBtn = new("TextButton",{
-        AnchorPoint=Vector2.new(1,0.5),
-        Position=UDim2.new(1,-8,0.5,0),
-        Size=UDim2.new(0,20,0,20),
-        BackgroundTransparency=1, Text="›",
-        TextColor3=Config.TextMuted, Font=Config.FontBold, TextSize=20,
-        AutoButtonColor=false, Parent=UserCard,
-    })
-
-    --=======================================================--
-    --                    TAB SYSTEM                          --
-    --=======================================================--
-    local ActiveTab = nil
-    local AllTabs   = {}
-
-    local function SetTab(td)
+    local function SetActive()
         if ActiveTab==td then return end
         if ActiveTab then
             ActiveTab.Page.Visible=false
-            tw(ActiveTab.Btn,0.15,{BackgroundTransparency=1})
-            tw(ActiveTab.Lbl,0.15,{TextColor3=Config.TextSecondary})
-            tw(ActiveTab.Ico,0.15,{TextColor3=Config.TextMuted})
+            tw(ActiveTab.Btn,.15,{BackgroundTransparency=1,BackgroundColor3=C.SurfH})
+            tw(ActiveTab.Lbl,.15,{TextColor3=C.T2})
+            tw(ActiveTab.Ico,.15,{TextColor3=C.TM})
             ActiveTab.Bar.Visible=false
         end
         ActiveTab=td
         td.Page.Visible=true
-        tw(td.Btn,0.15,{BackgroundTransparency=0,BackgroundColor3=Config.SurfaceHover})
-        tw(td.Lbl,0.15,{TextColor3=Config.TextPrimary})
-        tw(td.Ico,0.15,{TextColor3=GetAccent()})
+        tw(td.Btn,.15,{BackgroundTransparency=0,BackgroundColor3=C.SurfH})
+        tw(td.Lbl,.15,{TextColor3=C.T1})
+        tw(td.Ico,.15,{TextColor3=C.Accent})
         td.Bar.Visible=true
     end
 
-    local function AddTab(name, icon)
-        local btn = new("TextButton",{
-            Size=UDim2.new(1,0,0,36),
-            BackgroundColor3=Config.SurfaceHover,
-            BackgroundTransparency=1,
-            BorderSizePixel=0, Text="",
-            AutoButtonColor=false, Parent=SideScroll,
-        },{rnd(7)})
+    btn.MouseButton1Click:Connect(SetActive)
+    btn.MouseEnter:Connect(function() if ActiveTab~=td then tw(btn,.12,{BackgroundTransparency=0});tw(lbl,.12,{TextColor3=C.T1}) end end)
+    btn.MouseLeave:Connect(function() if ActiveTab~=td then tw(btn,.12,{BackgroundTransparency=1});tw(lbl,.12,{TextColor3=C.T2}) end end)
 
-        local bar = new("Frame",{
-            Position=UDim2.new(0,0,0.5,0), AnchorPoint=Vector2.new(0,0.5),
-            Size=UDim2.new(0,3,0,20),
-            BackgroundColor3=GetAccent(), BorderSizePixel=0,
-            Visible=false, Parent=btn,
-        },{rnd(2)})
+    --==[ COMPONENT BUILDERS ]==--
+    local A = {}
 
-        local ico = new("TextLabel",{
-            Position=UDim2.new(0,10,0.5,0), AnchorPoint=Vector2.new(0,0.5),
-            Size=UDim2.new(0,20,0,20),
-            BackgroundTransparency=1, Text=icon or "•",
-            TextColor3=Config.TextMuted,
-            Font=Config.FontBold, TextSize=14, Parent=btn,
-        })
-
-        local lbl = new("TextLabel",{
-            Position=UDim2.new(0,34,0,0), Size=UDim2.new(1,-38,1,0),
-            BackgroundTransparency=1, Text=name,
-            TextColor3=Config.TextSecondary,
-            Font=Config.Font, TextSize=12,
-            TextXAlignment=Enum.TextXAlignment.Left, Parent=btn,
-        })
-
-        local page = new("ScrollingFrame",{
-            Size=UDim2.new(1,0,1,0),
-            BackgroundTransparency=1, BorderSizePixel=0,
-            ScrollBarThickness=3,
-            ScrollBarImageColor3=GetAccent(),
-            CanvasSize=UDim2.new(0,0,0,0),
-            AutomaticCanvasSize=Enum.AutomaticSize.Y,
-            Visible=false, Parent=ContentArea,
-        },{
-            new("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,6)}),
-            pad(14,14,14,14),
-        })
-
-        local td={Btn=btn,Page=page,Lbl=lbl,Ico=ico,Bar=bar}
-        table.insert(AllTabs,td)
-
-        btn.MouseButton1Click:Connect(function() SetTab(td) end)
-        btn.MouseEnter:Connect(function()
-            if ActiveTab~=td then
-                tw(btn,0.12,{BackgroundTransparency=0})
-                tw(lbl,0.12,{TextColor3=Config.TextPrimary})
-            end
-        end)
-        btn.MouseLeave:Connect(function()
-            if ActiveTab~=td then
-                tw(btn,0.12,{BackgroundTransparency=1})
-                tw(lbl,0.12,{TextColor3=Config.TextSecondary})
-            end
-        end)
-
-        --==[ COMPONENTS ]==--
-        local API={}
-
-        function API:Section(text)
-            new("TextLabel",{
-                Size=UDim2.new(1,0,0,20),
-                BackgroundTransparency=1, Text=text,
-                TextColor3=Config.TextSecondary,
-                Font=Config.Font, TextSize=11,
-                TextXAlignment=Enum.TextXAlignment.Left,
-                Parent=page,
-            })
-        end
-
-        function API:Divider()
-            new("Frame",{
-                Size=UDim2.new(1,0,0,1),
-                BackgroundColor3=Config.Border, BorderSizePixel=0, Parent=page,
-            })
-        end
-
-        local function Row(h)
-            return new("Frame",{
-                Size=UDim2.new(1,0,0,h or 42),
-                BackgroundColor3=Config.Surface, BorderSizePixel=0,
-                Parent=page,
-            },{rnd(8), bdr(Config.Border)})
-        end
-
-        -- TOGGLE with notification option
-        function API:Toggle(text, default, callback, notifyMsg)
-            local state=default or false
-            local row=Row(42)
-
-            new("TextLabel",{
-                Position=UDim2.new(0,14,0,0), Size=UDim2.new(1,-76,1,0),
-                BackgroundTransparency=1, Text=text,
-                TextColor3=Config.TextPrimary, Font=Config.Font, TextSize=12,
-                TextXAlignment=Enum.TextXAlignment.Left, Parent=row,
-            })
-
-            new("TextButton",{
-                AnchorPoint=Vector2.new(1,0.5),
-                Position=UDim2.new(1,-52,0.5,0),
-                Size=UDim2.new(0,26,0,26),
-                BackgroundColor3=Config.SurfaceHover, BorderSizePixel=0,
-                Text="···", TextColor3=Config.TextMuted,
-                Font=Config.FontBold, TextSize=11,
-                AutoButtonColor=false, Parent=row,
-            },{rnd(5)})
-
-            local sw=new("Frame",{
-                AnchorPoint=Vector2.new(1,0.5),
-                Position=UDim2.new(1,-12,0.5,0),
-                Size=UDim2.new(0,36,0,19),
-                BackgroundColor3=Config.Border, BorderSizePixel=0, Parent=row,
-            },{rnd(10)})
-
-            local knob=new("Frame",{
-                Position=UDim2.new(0,2,0.5,0), AnchorPoint=Vector2.new(0,0.5),
-                Size=UDim2.new(0,15,0,15),
-                BackgroundColor3=Config.TextMuted, BorderSizePixel=0, Parent=sw,
-            },{rnd(8)})
-
-            local function refresh()
-                if state then
-                    tw(sw,0.18,{BackgroundColor3=GetAccent()})
-                    tw(knob,0.18,{Position=UDim2.new(1,-17,0.5,0),BackgroundColor3=Color3.new(1,1,1)})
-                else
-                    tw(sw,0.18,{BackgroundColor3=Config.Border})
-                    tw(knob,0.18,{Position=UDim2.new(0,2,0.5,0),BackgroundColor3=Config.TextMuted})
-                end
-            end
-            refresh()
-
-            local hit=new("TextButton",{
-                Size=UDim2.new(1,0,1,0),
-                BackgroundTransparency=1, Text="", Parent=row,
-            })
-            hit.MouseButton1Click:Connect(function()
-                state=not state; refresh()
-                local nm = notifyMsg or text
-                Notify(nm, state and "Enabled" or "Disabled", 2, state and "success" or "error")
-                if callback then pcall(callback,state) end
-            end)
-
-            return {
-                Set=function(_,v) state=v; refresh() end,
-                Get=function() return state end,
-            }
-        end
-
-        -- DROPDOWN
-        function API:Dropdown(text, opts, default, callback)
-            local sel=default or opts[1]
-            local open=false
-            local baseH,optH=42,30
-
-            local row=new("Frame",{
-                Size=UDim2.new(1,0,0,baseH),
-                BackgroundColor3=Config.Surface, BorderSizePixel=0,
-                ClipsDescendants=true, Parent=page,
-            },{rnd(8), bdr(Config.Border)})
-
-            new("TextLabel",{
-                Position=UDim2.new(0,14,0,0), Size=UDim2.new(0.5,0,0,baseH),
-                BackgroundTransparency=1, Text=text,
-                TextColor3=Config.TextPrimary, Font=Config.Font, TextSize=12,
-                TextXAlignment=Enum.TextXAlignment.Left, Parent=row,
-            })
-
-            local valLbl=new("TextLabel",{
-                AnchorPoint=Vector2.new(1,0),
-                Position=UDim2.new(1,-30,0,0),
-                Size=UDim2.new(0.45,0,0,baseH),
-                BackgroundTransparency=1, Text=sel,
-                TextColor3=Config.TextSecondary, Font=Config.FontReg, TextSize=12,
-                TextXAlignment=Enum.TextXAlignment.Right, Parent=row,
-            })
-
-            local arrowBox=new("Frame",{
-                AnchorPoint=Vector2.new(1,0.5),
-                Position=UDim2.new(1,-10,0,baseH/2),
-                Size=UDim2.new(0,16,0,16),
-                BackgroundColor3=Config.SurfaceHover, BorderSizePixel=0, Parent=row,
-            },{rnd(4), bdr(Config.Border)})
-            local arrowLbl=new("TextLabel",{
-                Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
-                Text="▾", TextColor3=Config.TextSecondary,
-                Font=Config.FontBold, TextSize=10, Parent=arrowBox,
-            })
-
-            local listFrame=new("Frame",{
-                Position=UDim2.new(0,6,0,baseH+2),
-                Size=UDim2.new(1,-12,0,0),
-                BackgroundTransparency=1, Parent=row,
-            },{new("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,2)})})
-
-            for _,opt in ipairs(opts) do
-                local ob=new("TextButton",{
-                    Size=UDim2.new(1,0,0,optH),
-                    BackgroundColor3=Config.SurfaceHover, BorderSizePixel=0,
-                    Text=opt, TextColor3=Config.TextSecondary,
-                    Font=Config.FontReg, TextSize=12,
-                    AutoButtonColor=false, Parent=listFrame,
-                },{rnd(5)})
-                ob.MouseEnter:Connect(function() tw(ob,0.1,{BackgroundColor3=Config.BorderHover,TextColor3=Config.TextPrimary}) end)
-                ob.MouseLeave:Connect(function() tw(ob,0.1,{BackgroundColor3=Config.SurfaceHover,TextColor3=Config.TextSecondary}) end)
-                ob.MouseButton1Click:Connect(function()
-                    sel=opt; valLbl.Text=opt; open=false
-                    tw(row,0.18,{Size=UDim2.new(1,0,0,baseH)})
-                    tw(arrowLbl,0.18,{Rotation=0})
-                    if callback then pcall(callback,opt) end
-                end)
-            end
-
-            local hit=new("TextButton",{
-                Size=UDim2.new(1,0,0,baseH),
-                BackgroundTransparency=1, Text="", Parent=row,
-            })
-            hit.MouseButton1Click:Connect(function()
-                open=not open
-                local nh=open and (baseH+4+(#opts*(optH+2))) or baseH
-                tw(row,0.2,{Size=UDim2.new(1,0,0,nh)})
-                tw(arrowLbl,0.18,{Rotation=open and 180 or 0})
-            end)
-
-            return {
-                Set=function(_,v) sel=v; valLbl.Text=v end,
-                Get=function() return sel end,
-            }
-        end
-
-        -- SLIDER
-        function API:Slider(text, mn, mx, def, callback)
-            mn,mx=mn or 0,mx or 100
-            local val=math.clamp(def or mn,mn,mx)
-            local row=Row(54)
-
-            new("TextLabel",{
-                Position=UDim2.new(0,14,0,8), Size=UDim2.new(0.65,0,0,16),
-                BackgroundTransparency=1, Text=text,
-                TextColor3=Config.TextPrimary, Font=Config.Font, TextSize=12,
-                TextXAlignment=Enum.TextXAlignment.Left, Parent=row,
-            })
-            local vLbl=new("TextLabel",{
-                AnchorPoint=Vector2.new(1,0), Position=UDim2.new(1,-14,0,8),
-                Size=UDim2.new(0,60,0,16),
-                BackgroundTransparency=1, Text=tostring(val),
-                TextColor3=GetAccent(), Font=Config.Font, TextSize=12,
-                TextXAlignment=Enum.TextXAlignment.Right, Parent=row,
-            })
-            local track=new("Frame",{
-                Position=UDim2.new(0,14,1,-13), Size=UDim2.new(1,-28,0,4),
-                BackgroundColor3=Config.Border, BorderSizePixel=0, Parent=row,
-            },{rnd(2)})
-            local fill=new("Frame",{
-                Size=UDim2.new((val-mn)/(mx-mn),0,1,0),
-                BackgroundColor3=GetAccent(), BorderSizePixel=0, Parent=track,
-            },{rnd(2)})
-
-            local dragging=false
-            local function setX(x)
-                local r=math.clamp((x-track.AbsolutePosition.X)/track.AbsoluteSize.X,0,1)
-                val=math.floor(mn+(mx-mn)*r+0.5)
-                vLbl.Text=tostring(val); fill.Size=UDim2.new(r,0,1,0)
-                if callback then pcall(callback,val) end
-            end
-            track.InputBegan:Connect(function(i)
-                if i.UserInputType==Enum.UserInputType.MouseButton1 then dragging=true;setX(i.Position.X) end
-            end)
-            UserInputService.InputChanged:Connect(function(i)
-                if dragging and i.UserInputType==Enum.UserInputType.MouseMovement then setX(i.Position.X) end
-            end)
-            UserInputService.InputEnded:Connect(function(i)
-                if i.UserInputType==Enum.UserInputType.MouseButton1 then dragging=false end
-            end)
-            return {
-                Set=function(_,v)
-                    val=math.clamp(v,mn,mx); vLbl.Text=tostring(val)
-                    fill.Size=UDim2.new((val-mn)/(mx-mn),0,1,0)
-                end,
-                Get=function() return val end,
-            }
-        end
-
-        -- BUTTON
-        function API:Button(text, callback)
-            local b=new("TextButton",{
-                Size=UDim2.new(1,0,0,38),
-                BackgroundColor3=Config.Surface, BorderSizePixel=0,
-                Text=text, TextColor3=Config.TextPrimary,
-                Font=Config.Font, TextSize=12,
-                AutoButtonColor=false, Parent=page,
-            },{rnd(8), bdr(Config.Border)})
-            b.MouseEnter:Connect(function()
-                tw(b,0.12,{BackgroundColor3=Config.SurfaceHover})
-                tw(b:FindFirstChildOfClass("UIStroke"),0.12,{Color=GetAccent()})
-            end)
-            b.MouseLeave:Connect(function()
-                tw(b,0.12,{BackgroundColor3=Config.Surface})
-                tw(b:FindFirstChildOfClass("UIStroke"),0.12,{Color=Config.Border})
-            end)
-            b.MouseButton1Click:Connect(function() if callback then pcall(callback) end end)
-            return b
-        end
-
-        -- PRIMARY BUTTON (accent colored)
-        function API:PrimaryButton(text, callback)
-            local b=new("TextButton",{
-                Size=UDim2.new(1,0,0,38),
-                BackgroundColor3=GetAccent(), BorderSizePixel=0,
-                Text=text, TextColor3=Color3.new(1,1,1),
-                Font=Config.FontBold, TextSize=12,
-                AutoButtonColor=false, Parent=page,
-            },{rnd(8)})
-            b.MouseEnter:Connect(function() tw(b,0.12,{BackgroundColor3=Config.AccentHover}) end)
-            b.MouseLeave:Connect(function() tw(b,0.12,{BackgroundColor3=GetAccent()}) end)
-            b.MouseButton1Click:Connect(function() if callback then pcall(callback) end end)
-            return b
-        end
-
-        -- KEYBIND
-        function API:Keybind(text, default, callback)
-            local key = default or Enum.KeyCode.Unknown
-            local listening = false
-            local row = Row(42)
-
-            new("TextLabel",{
-                Position=UDim2.new(0,14,0,0), Size=UDim2.new(1,-100,1,0),
-                BackgroundTransparency=1, Text=text,
-                TextColor3=Config.TextPrimary, Font=Config.Font, TextSize=12,
-                TextXAlignment=Enum.TextXAlignment.Left, Parent=row,
-            })
-
-            local keyBtn=new("TextButton",{
-                AnchorPoint=Vector2.new(1,0.5),
-                Position=UDim2.new(1,-10,0.5,0),
-                Size=UDim2.new(0,80,0,26),
-                BackgroundColor3=Config.SurfaceHover, BorderSizePixel=0,
-                Text=key.Name, TextColor3=GetAccent(),
-                Font=Config.FontBold, TextSize=11,
-                AutoButtonColor=false, Parent=row,
-            },{rnd(5), bdr(Config.Border)})
-
-            local kbData = {key=key, name=text, callback=callback}
-            table.insert(Keybinds, kbData)
-
-            keyBtn.MouseButton1Click:Connect(function()
-                if ListeningFor then return end
-                listening=true; ListeningFor=kbData
-                keyBtn.Text="[ Press key ]"
-                keyBtn.TextColor3=Config.TextPrimary
-                tw(keyBtn,0.1,{BackgroundColor3=Config.Surface})
-            end)
-
-            UserInputService.InputBegan:Connect(function(input, gpe)
-                if not listening or not ListeningFor or ListeningFor~=kbData then return end
-                if input.UserInputType==Enum.UserInputType.Keyboard then
-                    key=input.KeyCode; kbData.key=key
-                    keyBtn.Text=key.Name
-                    keyBtn.TextColor3=GetAccent()
-                    tw(keyBtn,0.1,{BackgroundColor3=Config.SurfaceHover})
-                    listening=false; ListeningFor=nil
-                    Notify("Keybind Set",text.." → "..key.Name,2,"success")
-                end
-            end)
-
-            return kbData
-        end
-
-        -- TEXTBOX
-        function API:Textbox(text, placeholder, callback)
-            local row=Row(42)
-            new("TextLabel",{
-                Position=UDim2.new(0,14,0,0), Size=UDim2.new(0.38,0,1,0),
-                BackgroundTransparency=1, Text=text,
-                TextColor3=Config.TextPrimary, Font=Config.Font, TextSize=12,
-                TextXAlignment=Enum.TextXAlignment.Left, Parent=row,
-            })
-            local box=new("TextBox",{
-                AnchorPoint=Vector2.new(1,0.5), Position=UDim2.new(1,-10,0.5,0),
-                Size=UDim2.new(0.57,0,0,26),
-                BackgroundColor3=Config.SurfaceHover, BorderSizePixel=0,
-                Text="", PlaceholderText=placeholder or "",
-                PlaceholderColor3=Config.TextMuted, TextColor3=Config.TextPrimary,
-                Font=Config.FontReg, TextSize=12, ClearTextOnFocus=false, Parent=row,
-            },{rnd(5), bdr(Config.Border)})
-            box.FocusLost:Connect(function(e) if e and callback then pcall(callback,box.Text) end end)
-            return box
-        end
-
-        -- INFO ROW
-        function API:Info(label, value)
-            local row=new("Frame",{
-                Size=UDim2.new(1,0,0,36),
-                BackgroundColor3=Config.Surface, BorderSizePixel=0, Parent=page,
-            },{rnd(8), bdr(Config.Border)})
-            new("TextLabel",{
-                Position=UDim2.new(0,14,0,0), Size=UDim2.new(0.5,0,1,0),
-                BackgroundTransparency=1, Text=label,
-                TextColor3=Config.TextSecondary, Font=Config.FontReg, TextSize=11,
-                TextXAlignment=Enum.TextXAlignment.Left, Parent=row,
-            })
-            local vl=new("TextLabel",{
-                AnchorPoint=Vector2.new(1,0.5), Position=UDim2.new(1,-14,0.5,0),
-                Size=UDim2.new(0.5,0,0,18),
-                BackgroundTransparency=1, Text=tostring(value),
-                TextColor3=Config.TextPrimary, Font=Config.FontBold, TextSize=11,
-                TextXAlignment=Enum.TextXAlignment.Right, Parent=row,
-            })
-            return {SetValue=function(_,v) vl.Text=tostring(v) end}
-        end
-
-        return API
+    function A:Section(text)
+        inst("TextLabel",{Size=UDim2.new(1,0,0,20),BackgroundTransparency=1,Text=text,TextColor3=C.T2,Font=C.Font,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,Parent=page})
     end
 
-    --=======================================================--
-    --               PROFILE OVERLAY                         --
-    --=======================================================--
-    local ProfileOverlay = new("Frame",{
-        Size=UDim2.new(1,0,1,0),
-        BackgroundColor3=Color3.fromRGB(0,0,0),
-        BackgroundTransparency=0.45,
-        BorderSizePixel=0, Visible=false, ZIndex=10, Parent=ContentArea,
-    })
-    local ProfileCard = new("Frame",{
-        AnchorPoint=Vector2.new(0.5,0.5),
-        Position=UDim2.new(0.5,0,0.5,0),
-        Size=UDim2.new(0,320,0,380),
-        BackgroundColor3=Config.Background, BorderSizePixel=0,
-        ZIndex=11, Parent=ProfileOverlay,
-    },{rnd(14), bdr(Config.Border)})
-
-    -- Red top stripe
-    new("Frame",{
-        Size=UDim2.new(1,0,0,3), BackgroundColor3=GetAccent(),
-        BorderSizePixel=0, ZIndex=12, Parent=ProfileCard,
-    },{rnd(14)})
-    new("Frame",{
-        Position=UDim2.new(0,0,0,1), Size=UDim2.new(1,0,0,2),
-        BackgroundColor3=GetAccent(), BorderSizePixel=0, ZIndex=12, Parent=ProfileCard,
-    })
-
-    -- Close profile
-    local closeProfile=new("TextButton",{
-        AnchorPoint=Vector2.new(1,0),
-        Position=UDim2.new(1,-10,0,10),
-        Size=UDim2.new(0,26,0,26),
-        BackgroundColor3=Config.Surface, BorderSizePixel=0,
-        Text="✕", TextColor3=Config.TextSecondary,
-        Font=Config.FontBold, TextSize=13,
-        AutoButtonColor=false, ZIndex=12, Parent=ProfileCard,
-    },{rnd(7)})
-    closeProfile.MouseButton1Click:Connect(function()
-        ProfileOverlay.Visible=false
-    end)
-
-    -- Avatar (large)
-    local bigAvFrame=new("Frame",{
-        AnchorPoint=Vector2.new(0.5,0),
-        Position=UDim2.new(0.5,0,0,22),
-        Size=UDim2.new(0,80,0,80),
-        BackgroundColor3=GetAccent(), BorderSizePixel=0, ZIndex=12, Parent=ProfileCard,
-    },{rnd(40)})
-    local bigAvImg=new("ImageLabel",{
-        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
-        Image="", ZIndex=13, Parent=bigAvFrame,
-    },{rnd(40)})
-    local bigAvFallback=new("TextLabel",{
-        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
-        Text=string.upper(string.sub(LocalPlayer.Name,1,1)),
-        TextColor3=Color3.new(1,1,1), Font=Config.FontBold, TextSize=36,
-        ZIndex=13, Parent=bigAvFrame,
-    })
-
-    task.spawn(function()
-        local url=GetAvatarUrl(LocalPlayer.UserId)
-        if url then
-            bigAvImg.Image=url; bigAvFallback.Visible=false
-        end
-    end)
-
-    new("TextLabel",{
-        AnchorPoint=Vector2.new(0.5,0),
-        Position=UDim2.new(0.5,0,0,112),
-        Size=UDim2.new(1,-30,0,22),
-        BackgroundTransparency=1, Text=LocalPlayer.DisplayName,
-        TextColor3=Config.TextPrimary, Font=Config.FontBold, TextSize=16,
-        ZIndex=12, Parent=ProfileCard,
-    })
-    new("TextLabel",{
-        AnchorPoint=Vector2.new(0.5,0),
-        Position=UDim2.new(0.5,0,0,135),
-        Size=UDim2.new(1,-30,0,15),
-        BackgroundTransparency=1, Text="@"..LocalPlayer.Name,
-        TextColor3=Config.TextSecondary, Font=Config.FontReg, TextSize=12,
-        ZIndex=12, Parent=ProfileCard,
-    })
-
-    new("Frame",{
-        Position=UDim2.new(0,0,0,162),
-        Size=UDim2.new(1,0,0,1), BackgroundColor3=Config.Border,
-        BorderSizePixel=0, ZIndex=12, Parent=ProfileCard,
-    })
-
-    -- Stats grid
-    local statsData={
-        {"User ID", tostring(LocalPlayer.UserId)},
-        {"Account Age", LocalPlayer.AccountAge.." days"},
-        {"Executor", GetExecutor()},
-        {"Game ID", tostring(game.PlaceId)},
-        {"Team", LocalPlayer.Team and LocalPlayer.Team.Name or "None"},
-        {"Membership", "Premium | Lifetime"},
-    }
-    for i,stat in ipairs(statsData) do
-        local yPos = 170 + (i-1)*28
-        new("TextLabel",{
-            Position=UDim2.new(0,18,0,yPos), Size=UDim2.new(0.48,0,0,22),
-            BackgroundTransparency=1, Text=stat[1],
-            TextColor3=Config.TextSecondary, Font=Config.FontReg, TextSize=11,
-            TextXAlignment=Enum.TextXAlignment.Left, ZIndex=12, Parent=ProfileCard,
-        })
-        new("TextLabel",{
-            AnchorPoint=Vector2.new(1,0),
-            Position=UDim2.new(1,-18,0,yPos), Size=UDim2.new(0.48,0,0,22),
-            BackgroundTransparency=1, Text=stat[2],
-            TextColor3=Config.TextPrimary, Font=Config.FontBold, TextSize=11,
-            TextXAlignment=Enum.TextXAlignment.Right, ZIndex=12, Parent=ProfileCard,
-        })
+    function A:Separator()
+        inst("Frame",{Size=UDim2.new(1,0,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=page})
     end
 
-    profileBtn.MouseButton1Click:Connect(function()
-        ProfileOverlay.Visible=true
+    function A:Label(text)
+        inst("TextLabel",{Size=UDim2.new(1,0,0,18),BackgroundTransparency=1,Text=text,TextColor3=C.T2,Font=C.FontR,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,TextWrapped=true,Parent=page})
+    end
+
+    local function Row(h)
+        return inst("Frame",{Size=UDim2.new(1,0,0,h or 42),BackgroundColor3=C.Surf,BorderSizePixel=0,Parent=page},{crn(8),bdr(C.Bdr)})
+    end
+
+    function A:Toggle(text,default,callback)
+        local state=default or false
+        local row=Row(42)
+        inst("TextLabel",{Position=UDim2.new(0,14,0,0),Size=UDim2.new(1,-78,1,0),BackgroundTransparency=1,Text=text,TextColor3=C.T1,Font=C.Font,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,Parent=row})
+        inst("TextButton",{AnchorPoint=Vector2.new(1,.5),Position=UDim2.new(1,-52,.5,0),Size=UDim2.new(0,26,0,26),BackgroundColor3=C.SurfH,BorderSizePixel=0,Text="···",TextColor3=C.TM,Font=C.FontB,TextSize=11,AutoButtonColor=false,Parent=row},{crn(5)})
+        local sw=inst("Frame",{AnchorPoint=Vector2.new(1,.5),Position=UDim2.new(1,-12,.5,0),Size=UDim2.new(0,36,0,19),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=row},{crn(10)})
+        local kn=inst("Frame",{Position=UDim2.new(0,2,.5,0),AnchorPoint=Vector2.new(0,.5),Size=UDim2.new(0,15,0,15),BackgroundColor3=C.TM,BorderSizePixel=0,Parent=sw},{crn(8)})
+        local function ref()
+            if state then tw(sw,.18,{BackgroundColor3=C.Accent});tw(kn,.18,{Position=UDim2.new(1,-17,.5,0),BackgroundColor3=Color3.new(1,1,1)})
+            else tw(sw,.18,{BackgroundColor3=C.Bdr});tw(kn,.18,{Position=UDim2.new(0,2,.5,0),BackgroundColor3=C.TM}) end
+        end
+        ref()
+        inst("TextButton",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="",Parent=row}).MouseButton1Click:Connect(function()
+            state=not state;ref()
+            Notify(text,state and "Enabled" or "Disabled",2,state and "success" or "error")
+            if callback then pcall(callback,state) end
+        end)
+        return {Set=function(_,v)state=v;ref()end,Get=function()return state end}
+    end
+
+    function A:Slider(text,mn,mx,def,callback)
+        mn,mx=mn or 0,mx or 100;local val=math.clamp(def or mn,mn,mx)
+        local row=Row(54)
+        inst("TextLabel",{Position=UDim2.new(0,14,0,8),Size=UDim2.new(.65,0,0,16),BackgroundTransparency=1,Text=text,TextColor3=C.T1,Font=C.Font,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,Parent=row})
+        local vL=inst("TextLabel",{AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-14,0,8),Size=UDim2.new(0,60,0,16),BackgroundTransparency=1,Text=tostring(val),TextColor3=C.Accent,Font=C.Font,TextSize=12,TextXAlignment=Enum.TextXAlignment.Right,Parent=row})
+        local track=inst("Frame",{Position=UDim2.new(0,14,1,-14),Size=UDim2.new(1,-28,0,4),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=row},{crn(2)})
+        local fill=inst("Frame",{Size=UDim2.new((val-mn)/(mx-mn),0,1,0),BackgroundColor3=C.Accent,BorderSizePixel=0,Parent=track},{crn(2)})
+        local dg=false
+        local function sx(x) local r=math.clamp((x-track.AbsolutePosition.X)/track.AbsoluteSize.X,0,1);val=math.floor(mn+(mx-mn)*r+.5);vL.Text=tostring(val);fill.Size=UDim2.new(r,0,1,0);if callback then pcall(callback,val) end end
+        track.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then dg=true;sx(i.Position.X) end end)
+        UserInputService.InputChanged:Connect(function(i) if dg and i.UserInputType==Enum.UserInputType.MouseMovement then sx(i.Position.X) end end)
+        UserInputService.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then dg=false end end)
+        return {Set=function(_,v)val=math.clamp(v,mn,mx);vL.Text=tostring(val);fill.Size=UDim2.new((val-mn)/(mx-mn),0,1,0)end,Get=function()return val end}
+    end
+
+    function A:Dropdown(text,opts,default,callback)
+        local sel=default or opts[1];local open=false;local bH,oH=42,30
+        local row=inst("Frame",{Size=UDim2.new(1,0,0,bH),BackgroundColor3=C.Surf,BorderSizePixel=0,ClipsDescendants=true,Parent=page},{crn(8),bdr(C.Bdr)})
+        inst("TextLabel",{Position=UDim2.new(0,14,0,0),Size=UDim2.new(.5,0,0,bH),BackgroundTransparency=1,Text=text,TextColor3=C.T1,Font=C.Font,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,Parent=row})
+        local vL=inst("TextLabel",{AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-30,0,0),Size=UDim2.new(.45,0,0,bH),BackgroundTransparency=1,Text=sel,TextColor3=C.T2,Font=C.FontR,TextSize=12,TextXAlignment=Enum.TextXAlignment.Right,Parent=row})
+        local aBox=inst("Frame",{AnchorPoint=Vector2.new(1,.5),Position=UDim2.new(1,-10,0,bH/2),Size=UDim2.new(0,16,0,16),BackgroundColor3=C.SurfH,BorderSizePixel=0,Parent=row},{crn(4),bdr(C.Bdr)})
+        local aLbl=inst("TextLabel",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="▾",TextColor3=C.T2,Font=C.FontB,TextSize=10,Parent=aBox})
+        local lF=inst("Frame",{Position=UDim2.new(0,6,0,bH+2),Size=UDim2.new(1,-12,0,0),BackgroundTransparency=1,Parent=row},{inst("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,2)})})
+        for _,opt in ipairs(opts) do
+            local ob=inst("TextButton",{Size=UDim2.new(1,0,0,oH),BackgroundColor3=C.SurfH,BorderSizePixel=0,Text=opt,TextColor3=C.T2,Font=C.FontR,TextSize=12,AutoButtonColor=false,Parent=lF},{crn(6)})
+            ob.MouseEnter:Connect(function() tw(ob,.1,{BackgroundColor3=C.BdrH,TextColor3=C.T1}) end)
+            ob.MouseLeave:Connect(function() tw(ob,.1,{BackgroundColor3=C.SurfH,TextColor3=C.T2}) end)
+            ob.MouseButton1Click:Connect(function() sel=opt;vL.Text=opt;open=false;tw(row,.18,{Size=UDim2.new(1,0,0,bH)});tw(aLbl,.18,{Rotation=0});if callback then pcall(callback,opt) end end)
+        end
+        inst("TextButton",{Size=UDim2.new(1,0,0,bH),BackgroundTransparency=1,Text="",Parent=row}).MouseButton1Click:Connect(function()
+            open=not open;tw(row,.2,{Size=UDim2.new(1,0,0,open and (bH+4+(#opts*(oH+2))) or bH)});tw(aLbl,.18,{Rotation=open and 180 or 0})
+        end)
+        return {Set=function(_,v)sel=v;vL.Text=v end,Get=function()return sel end}
+    end
+
+    function A:Button(text,callback)
+        local b=inst("TextButton",{Size=UDim2.new(1,0,0,38),BackgroundColor3=C.Surf,BorderSizePixel=0,Text=text,TextColor3=C.T1,Font=C.Font,TextSize=12,AutoButtonColor=false,Parent=page},{crn(8),bdr(C.Bdr)})
+        b.MouseEnter:Connect(function() tw(b,.12,{BackgroundColor3=C.SurfH});tw(b:FindFirstChildOfClass("UIStroke"),.12,{Color=C.Accent}) end)
+        b.MouseLeave:Connect(function() tw(b,.12,{BackgroundColor3=C.Surf});tw(b:FindFirstChildOfClass("UIStroke"),.12,{Color=C.Bdr}) end)
+        b.MouseButton1Click:Connect(function() if callback then pcall(callback) end end)
+        return b
+    end
+
+    function A:Textbox(text,placeholder,callback)
+        local row=Row(42)
+        inst("TextLabel",{Position=UDim2.new(0,14,0,0),Size=UDim2.new(.4,0,1,0),BackgroundTransparency=1,Text=text,TextColor3=C.T1,Font=C.Font,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,Parent=row})
+        local box=inst("TextBox",{AnchorPoint=Vector2.new(1,.5),Position=UDim2.new(1,-10,.5,0),Size=UDim2.new(.54,0,0,26),BackgroundColor3=C.SurfH,BorderSizePixel=0,Text="",PlaceholderText=placeholder or "",PlaceholderColor3=C.TM,TextColor3=C.T1,Font=C.FontR,TextSize=12,ClearTextOnFocus=false,Parent=row},{crn(6),bdr(C.Bdr)})
+        box.FocusLost:Connect(function(e) if e and callback then pcall(callback,box.Text) end end)
+        return box
+    end
+
+    function A:Keybind(text,defaultKey,callback)
+        local ck=defaultKey or Enum.KeyCode.Unknown;local binding=false
+        local row=Row(42)
+        inst("TextLabel",{Position=UDim2.new(0,14,0,0),Size=UDim2.new(1,-112,1,0),BackgroundTransparency=1,Text=text,TextColor3=C.T1,Font=C.Font,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,Parent=row})
+        local kb=inst("TextButton",{AnchorPoint=Vector2.new(1,.5),Position=UDim2.new(1,-12,.5,0),Size=UDim2.new(0,92,0,26),BackgroundColor3=C.SurfH,BorderSizePixel=0,Text=ck.Name,TextColor3=C.Accent,Font=C.Font,TextSize=11,AutoButtonColor=false,Parent=row},{crn(6),bdr(C.Bdr)})
+        kb.MouseButton1Click:Connect(function()
+            if binding then return end;binding=true;kb.Text="...";kb.TextColor3=C.Warn
+            local conn;conn=UserInputService.InputBegan:Connect(function(i)
+                if i.UserInputType==Enum.UserInputType.Keyboard then
+                    ck=i.KeyCode;kb.Text=i.KeyCode.Name;kb.TextColor3=C.Accent;binding=false;conn:Disconnect()
+                    Keybinds[text]={key=ck,cb=callback}
+                    Notify("Keybind Set",text.." → "..i.KeyCode.Name,2,"success")
+                end
+            end)
+        end)
+        if ck~=Enum.KeyCode.Unknown then Keybinds[text]={key=ck,cb=callback} end
+        return {Get=function()return ck end}
+    end
+
+    -- Auto-select this tab if it's the first one
+    if #AllTabs==1 then
+        task.defer(function()
+            td.Page.Visible=true
+            ActiveTab=td
+            tw(td.Btn,.15,{BackgroundTransparency=0,BackgroundColor3=C.SurfH})
+            tw(td.Lbl,.15,{TextColor3=C.T1})
+            tw(td.Ico,.15,{TextColor3=C.Accent})
+            td.Bar.Visible=true
+        end)
+    end
+
+    return A
+end
+
+--=======================================================--
+function BuildMain()
+
+    -- Root window — ClipsDescendants gives natural rounded corners to everything inside
+    Main=inst("Frame",{
+        Name="Main",AnchorPoint=Vector2.new(.5,.5),
+        Position=UDim2.new(.5,0,.5,0),Size=UDim2.new(0,0,0,0),
+        BackgroundColor3=C.BG,BorderSizePixel=0,
+        ClipsDescendants=true,Parent=Gui,
+    },{crn(12),bdr(C.Bdr)})
+    tw(Main,.45,{Size=UDim2.new(0,C.W,0,C.H)},Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+
+    --==[ TOPBAR — plain dark, zero colored bars ]==--
+    local TB=inst("Frame",{
+        Name="TopBar",Size=UDim2.new(1,0,0,C.TH),
+        BackgroundColor3=C.Side,BorderSizePixel=0,Parent=Main,
+    })
+    -- Square bottom corners so it merges into content
+    inst("Frame",{Position=UDim2.new(0,0,1,-10),Size=UDim2.new(1,0,0,10),BackgroundColor3=C.Side,BorderSizePixel=0,Parent=TB})
+    -- Thin neutral bottom border (not colored)
+    inst("Frame",{Position=UDim2.new(0,0,1,0),AnchorPoint=Vector2.new(0,1),Size=UDim2.new(1,0,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=TB})
+
+    -- Logo box (the only accent element in the topbar)
+    local logo=inst("Frame",{Position=UDim2.new(0,14,0.5,0),AnchorPoint=Vector2.new(0,0.5),Size=UDim2.new(0,30,0,30),BackgroundColor3=C.Accent,BorderSizePixel=0,Parent=TB},{crn(8)})
+    inst("TextLabel",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="P",TextColor3=Color3.new(1,1,1),Font=C.FontB,TextSize=17,Parent=logo})
+
+    inst("TextLabel",{Position=UDim2.new(0,52,0.5,-11),Size=UDim2.new(0,200,0,17),BackgroundTransparency=1,Text=C.Name,TextColor3=C.T1,Font=C.FontB,TextSize=14,TextXAlignment=Enum.TextXAlignment.Left,Parent=TB})
+    inst("TextLabel",{Position=UDim2.new(0,52,0.5,7), Size=UDim2.new(0,200,0,13),BackgroundTransparency=1,Text=LP.DisplayName,TextColor3=C.T2,Font=C.FontR,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,Parent=TB})
+
+    -- Neutral vertical divider between logo area and content area of topbar
+    inst("Frame",{Position=UDim2.new(0,C.SW,0,10),Size=UDim2.new(0,1,0,C.TH-20),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=TB})
+
+    -- Version badge
+    inst("Frame",{Position=UDim2.new(0,C.SW+14,0.5,0),AnchorPoint=Vector2.new(0,0.5),Size=UDim2.new(0,72,0,24),BackgroundColor3=C.Surf,BorderSizePixel=0,Parent=TB},{
+        crn(6),bdr(C.Bdr),
+        inst("TextLabel",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text=C.Version,TextColor3=C.T2,Font=C.FontR,TextSize=11})
+    })
+
+    -- Executor badge (dimmed accent background, subtle)
+    local execF=inst("Frame",{Position=UDim2.new(0,C.SW+96,0.5,0),AnchorPoint=Vector2.new(0,0.5),Size=UDim2.new(0,0,0,24),AutomaticSize=Enum.AutomaticSize.X,BackgroundColor3=C.AccentDim,BorderSizePixel=0,Parent=TB},{crn(6),pad(0,0,8,8)})
+    inst("TextLabel",{Size=UDim2.new(0,0,1,0),AutomaticSize=Enum.AutomaticSize.X,BackgroundTransparency=1,Text="⚙ "..ExecName,TextColor3=C.Accent,Font=C.Font,TextSize=11,Parent=execF})
+
+    --==[ WINDOW CONTROLS ]==--
+    local minimized=false
+    local SideBG2,SideScroll2,CA2,UC2  -- refs for hide/show on minimize
+
+    local function mkCtrl(sym,xOff,hc)
+        local b=inst("TextButton",{AnchorPoint=Vector2.new(1,.5),Position=UDim2.new(1,xOff,.5,0),Size=UDim2.new(0,28,0,28),BackgroundColor3=C.Surf,BorderSizePixel=0,Text=sym,TextColor3=C.T2,Font=C.FontB,TextSize=13,AutoButtonColor=false,Parent=TB},{crn(7)})
+        b.MouseEnter:Connect(function() tw(b,.12,{BackgroundColor3=hc,TextColor3=Color3.new(1,1,1)}) end)
+        b.MouseLeave:Connect(function() tw(b,.12,{BackgroundColor3=C.Surf,TextColor3=C.T2}) end)
+        return b
+    end
+    local BClose=mkCtrl("✕",-10,C.Bad)
+    local BMin  =mkCtrl("–",-44,C.BdrH)
+
+    BMin.MouseButton1Click:Connect(function()
+        minimized=not minimized
+        if minimized then
+            -- Collapse to just the topbar, compact width
+            if SideBG2    then SideBG2.Visible=false    end
+            if SideScroll2 then SideScroll2.Visible=false end
+            if CA2         then CA2.Visible=false         end
+            if UC2         then UC2.Visible=false         end
+            tw(Main,.25,{Size=UDim2.new(0,340,0,C.TH)})
+            BMin.Text="□"
+        else
+            tw(Main,.3,{Size=UDim2.new(0,C.W,0,C.H)},Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+            BMin.Text="–"
+            task.delay(.28,function()
+                if SideBG2     then SideBG2.Visible=true     end
+                if SideScroll2 then SideScroll2.Visible=true  end
+                if CA2          then CA2.Visible=true          end
+                if UC2          then UC2.Visible=true          end
+            end)
+        end
     end)
-    ProfileOverlay.MouseButton1Click:Connect(function()
-        ProfileOverlay.Visible=false
+    BClose.MouseButton1Click:Connect(function()
+        tw(Main,.25,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In)
+        task.wait(.28);Gui:Destroy()
     end)
+    drag(Main,TB)
 
-    --=======================================================--
-    --                  KEYBINDS OVERLAY                     --
-    --=======================================================--
-    local KbOverlay=new("Frame",{
-        Size=UDim2.new(1,0,1,0),
-        BackgroundColor3=Color3.fromRGB(0,0,0),
-        BackgroundTransparency=0.45,
-        BorderSizePixel=0, Visible=false, ZIndex=10, Parent=ContentArea,
-    })
-    local KbCard=new("Frame",{
-        AnchorPoint=Vector2.new(0.5,0.5),
-        Position=UDim2.new(0.5,0,0.5,0),
-        Size=UDim2.new(0,400,0,300),
-        BackgroundColor3=Config.Background, BorderSizePixel=0,
-        ZIndex=11, Parent=KbOverlay,
-    },{rnd(14), bdr(Config.Border)})
-
-    new("Frame",{
-        Size=UDim2.new(1,0,0,3), BackgroundColor3=GetAccent(),
-        BorderSizePixel=0, ZIndex=12, Parent=KbCard,
-    },{rnd(14)})
-    new("Frame",{
-        Position=UDim2.new(0,0,0,1), Size=UDim2.new(1,0,0,2),
-        BackgroundColor3=GetAccent(), BorderSizePixel=0, ZIndex=12, Parent=KbCard,
-    })
-
-    local closeKb=new("TextButton",{
-        AnchorPoint=Vector2.new(1,0), Position=UDim2.new(1,-10,0,10),
-        Size=UDim2.new(0,26,0,26),
-        BackgroundColor3=Config.Surface, BorderSizePixel=0,
-        Text="✕", TextColor3=Config.TextSecondary,
-        Font=Config.FontBold, TextSize=13,
-        AutoButtonColor=false, ZIndex=12, Parent=KbCard,
-    },{rnd(7)})
-    closeKb.MouseButton1Click:Connect(function() KbOverlay.Visible=false end)
-    KbOverlay.MouseButton1Click:Connect(function() KbOverlay.Visible=false end)
-
-    new("TextLabel",{
-        Position=UDim2.new(0,18,0,10), Size=UDim2.new(1,-60,0,22),
-        BackgroundTransparency=1, Text="Keybinds",
-        TextColor3=Config.TextPrimary, Font=Config.FontBold, TextSize=15,
-        TextXAlignment=Enum.TextXAlignment.Left, ZIndex=12, Parent=KbCard,
-    })
-
-    local kbList=new("ScrollingFrame",{
-        Position=UDim2.new(0,0,0,42), Size=UDim2.new(1,0,1,-42),
-        BackgroundTransparency=1, BorderSizePixel=0,
-        ScrollBarThickness=3, ScrollBarImageColor3=GetAccent(),
-        CanvasSize=UDim2.new(0,0,0,0), AutomaticCanvasSize=Enum.AutomaticSize.Y,
-        ZIndex=12, Parent=KbCard,
+    --==[ SIDEBAR BACKGROUND ]==--
+    SideBG2=inst("Frame",{
+        Name="SideBG",Position=UDim2.new(0,0,0,C.TH),
+        Size=UDim2.new(0,C.SW,1,-C.TH),
+        BackgroundColor3=C.Side,BorderSizePixel=0,Parent=Main,
     },{
-        new("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,4)}),
-        pad(8,8,12,12),
+        inst("Frame",{Position=UDim2.new(1,0,0,0),AnchorPoint=Vector2.new(1,0),Size=UDim2.new(0,1,1,0),BackgroundColor3=C.Bdr,BorderSizePixel=0})
     })
 
-    local function RefreshKbList()
-        for _,c in ipairs(kbList:GetChildren()) do
-            if c:IsA("Frame") then c:Destroy() end
-        end
-        local builtins = {
-            {"Toggle Menu", Config.ToggleKey},
-            {"Show Keybinds", Enum.KeyCode.F2},
-        }
-        for _,kb in ipairs(builtins) do
-            local r=new("Frame",{
-                Size=UDim2.new(1,0,0,36),
-                BackgroundColor3=Config.Surface, BorderSizePixel=0, ZIndex=13, Parent=kbList,
-            },{rnd(7), bdr(Config.Border)})
-            new("TextLabel",{
-                Position=UDim2.new(0,12,0,0), Size=UDim2.new(0.6,0,1,0),
-                BackgroundTransparency=1, Text=kb[1],
-                TextColor3=Config.TextPrimary, Font=Config.Font, TextSize=12,
-                TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14, Parent=r,
-            })
-            new("TextLabel",{
-                AnchorPoint=Vector2.new(1,0.5), Position=UDim2.new(1,-12,0.5,0),
-                Size=UDim2.new(0,80,0,24),
-                BackgroundTransparency=1, Text=kb[2].Name,
-                TextColor3=GetAccent(), Font=Config.FontBold, TextSize=11,
-                TextXAlignment=Enum.TextXAlignment.Right, ZIndex=14, Parent=r,
-            })
-        end
-        for _,kb in ipairs(Keybinds) do
-            local r=new("Frame",{
-                Size=UDim2.new(1,0,0,36),
-                BackgroundColor3=Config.Surface, BorderSizePixel=0, ZIndex=13, Parent=kbList,
-            },{rnd(7), bdr(Config.Border)})
-            new("TextLabel",{
-                Position=UDim2.new(0,12,0,0), Size=UDim2.new(0.6,0,1,0),
-                BackgroundTransparency=1, Text=kb.name,
-                TextColor3=Config.TextPrimary, Font=Config.Font, TextSize=12,
-                TextXAlignment=Enum.TextXAlignment.Left, ZIndex=14, Parent=r,
-            })
-            new("TextLabel",{
-                AnchorPoint=Vector2.new(1,0.5), Position=UDim2.new(1,-12,0.5,0),
-                Size=UDim2.new(0,80,0,24),
-                BackgroundTransparency=1, Text=kb.key.Name,
-                TextColor3=GetAccent(), Font=Config.FontBold, TextSize=11,
-                TextXAlignment=Enum.TextXAlignment.Right, ZIndex=14, Parent=r,
-            })
-        end
-    end
+    --==[ SIDEBAR SCROLL — tab buttons go here ]==--
+    SideScroll=inst("ScrollingFrame",{
+        Name="SideScroll",Position=UDim2.new(0,0,0,C.TH),
+        Size=UDim2.new(0,C.SW,1,-(C.TH+64)),
+        BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=0,
+        CanvasSize=UDim2.new(0,0,0,0),AutomaticCanvasSize=Enum.AutomaticSize.Y,
+        Parent=Main,
+    },{
+        inst("UIListLayout",{SortOrder=Enum.SortOrder.LayoutOrder,Padding=UDim.new(0,3)}),
+        pad(10,0,8,8),
+    })
+    SideScroll2=SideScroll
 
-    KbOverlay:GetPropertyChangedSignal("Visible"):Connect(function()
-        if KbOverlay.Visible then RefreshKbList() end
-    end)
+    --==[ CONTENT AREA ]==--
+    CA=inst("Frame",{Name="ContentArea",Position=UDim2.new(0,C.SW,0,C.TH),Size=UDim2.new(1,-C.SW,1,-C.TH),BackgroundTransparency=1,Parent=Main})
+    CA2=CA
+
+    --==[ USER CARD ]==--
+    local UC=inst("Frame",{Name="UserCard",Position=UDim2.new(0,0,1,-64),Size=UDim2.new(0,C.SW,0,64),BackgroundColor3=C.Side,BorderSizePixel=0,Parent=Main})
+    UC2=UC
+    inst("Frame",{Size=UDim2.new(1,0,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=UC})
+    inst("Frame",{Position=UDim2.new(1,0,0,0),AnchorPoint=Vector2.new(1,0),Size=UDim2.new(0,1,1,0),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=UC})
+
+    -- Avatar (Roblox headshot thumbnail)
+    local av=inst("ImageLabel",{Position=UDim2.new(0,10,0.5,0),AnchorPoint=Vector2.new(0,0.5),Size=UDim2.new(0,38,0,38),BackgroundColor3=C.Surf,BorderSizePixel=0,Parent=UC},{crn(19)})
+    pcall(function() av.Image="rbxthumb://type=AvatarHeadShot&id="..LP.UserId.."&w=60&h=60" end)
+    -- Avatar ring (accent, small — not a bar)
+    inst("Frame",{Position=UDim2.new(0,8,0.5,0),AnchorPoint=Vector2.new(0,0.5),Size=UDim2.new(0,42,0,42),BackgroundTransparency=1,BorderSizePixel=0,Parent=UC},{crn(21),bdr(C.Accent,1.5)})
+
+    inst("TextLabel",{Position=UDim2.new(0,54,0,13),Size=UDim2.new(1,-72,0,16),BackgroundTransparency=1,Text=LP.Name,TextColor3=C.T1,Font=C.Font,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,Parent=UC})
+    inst("TextLabel",{Position=UDim2.new(0,54,0,30),Size=UDim2.new(1,-72,0,13),BackgroundTransparency=1,Text="Premium | Lifetime",TextColor3=C.Accent,Font=C.FontR,TextSize=10,TextXAlignment=Enum.TextXAlignment.Left,Parent=UC})
+
+    local profBtn=inst("TextButton",{AnchorPoint=Vector2.new(1,.5),Position=UDim2.new(1,-8,.5,0),Size=UDim2.new(0,22,0,22),BackgroundColor3=C.Surf,BorderSizePixel=0,Text="›",TextColor3=C.T2,Font=C.FontB,TextSize=16,AutoButtonColor=false,Parent=UC},{crn(6)})
+    profBtn.MouseEnter:Connect(function() tw(profBtn,.12,{BackgroundColor3=C.Accent,TextColor3=Color3.new(1,1,1)}) end)
+    profBtn.MouseLeave:Connect(function() tw(profBtn,.12,{BackgroundColor3=C.Surf,TextColor3=C.T2}) end)
+
+    --==[ PROFILE OVERLAY ]==--
+    local PO=inst("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=C.BG,BackgroundTransparency=1,BorderSizePixel=0,Visible=false,ZIndex=10,Parent=CA})
+    local profOpen=false
+    local function toggleProf()
+        profOpen=not profOpen;PO.Visible=true
+        if profOpen then tw(PO,.2,{BackgroundTransparency=0})
+        else tw(PO,.2,{BackgroundTransparency=1});task.delay(.22,function() if not profOpen then PO.Visible=false end end) end
+    end
+    profBtn.MouseButton1Click:Connect(toggleProf)
+
+    local pCard=inst("Frame",{AnchorPoint=Vector2.new(.5,.5),Position=UDim2.new(.5,0,.5,0),Size=UDim2.new(0,340,0,390),BackgroundColor3=C.Surf,BorderSizePixel=0,ZIndex=11,Parent=PO},{crn(12),bdr(C.Bdr)})
+    inst("TextLabel",{Position=UDim2.new(0,0,0,14),Size=UDim2.new(1,0,0,18),BackgroundTransparency=1,Text="PLAYER PROFILE",TextColor3=C.Accent,Font=C.FontB,TextSize=11,ZIndex=12,Parent=pCard})
+    local pa=inst("ImageLabel",{AnchorPoint=Vector2.new(.5,0),Position=UDim2.new(.5,0,0,38),Size=UDim2.new(0,80,0,80),BackgroundColor3=C.Surf,BorderSizePixel=0,ZIndex=12,Parent=pCard},{crn(40)})
+    pcall(function() pa.Image="rbxthumb://type=AvatarHeadShot&id="..LP.UserId.."&w=150&h=150" end)
+    inst("Frame",{AnchorPoint=Vector2.new(.5,0),Position=UDim2.new(.5,0,0,36),Size=UDim2.new(0,84,0,84),BackgroundTransparency=1,BorderSizePixel=0,ZIndex=12,Parent=pCard},{crn(42),bdr(C.Accent,2)})
+    inst("TextLabel",{Position=UDim2.new(0,0,0,128),Size=UDim2.new(1,0,0,22),BackgroundTransparency=1,Text=LP.DisplayName,TextColor3=C.T1,Font=C.FontB,TextSize=17,ZIndex=12,Parent=pCard})
+    inst("TextLabel",{Position=UDim2.new(0,0,0,150),Size=UDim2.new(1,0,0,15),BackgroundTransparency=1,Text="@"..LP.Name,TextColor3=C.T2,Font=C.FontR,TextSize=12,ZIndex=12,Parent=pCard})
+    local infoRows={{"User ID",tostring(LP.UserId)},{"Account Age",tostring(LP.AccountAge or 0).." days"},{"Executor",ExecName},{"Game ID",tostring(game.PlaceId)},{"Team",LP.Team and LP.Team.Name or "NoTeam"},{"Membership","Premium | Lifetime"}}
+    for idx,row in ipairs(infoRows) do
+        local y=172+(idx-1)*30
+        inst("TextLabel",{Position=UDim2.new(0,20,0,y),Size=UDim2.new(.45,0,0,26),BackgroundTransparency=1,Text=row[1],TextColor3=C.T2,Font=C.FontR,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,ZIndex=12,Parent=pCard})
+        inst("TextLabel",{Position=UDim2.new(.5,0,0,y),Size=UDim2.new(.45,0,0,26),BackgroundTransparency=1,Text=row[2],TextColor3=C.T1,Font=C.Font,TextSize=12,TextXAlignment=Enum.TextXAlignment.Right,ZIndex=12,Parent=pCard})
+        if idx<#infoRows then inst("Frame",{Position=UDim2.new(0,14,0,y+26),Size=UDim2.new(1,-28,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,ZIndex=12,Parent=pCard}) end
+    end
+    local cpBtn=inst("TextButton",{AnchorPoint=Vector2.new(.5,1),Position=UDim2.new(.5,0,1,-12),Size=UDim2.new(0,110,0,30),BackgroundColor3=C.Surf,BorderSizePixel=0,Text="← Back",TextColor3=C.T2,Font=C.Font,TextSize=12,AutoButtonColor=false,ZIndex=12,Parent=pCard},{crn(8),bdr(C.Bdr)})
+    cpBtn.MouseButton1Click:Connect(toggleProf)
+    cpBtn.MouseEnter:Connect(function() tw(cpBtn,.12,{BackgroundColor3=C.SurfH}) end)
+    cpBtn.MouseLeave:Connect(function() tw(cpBtn,.12,{BackgroundColor3=C.Surf}) end)
 
     --=======================================================--
-    --                    TAB DEFINITIONS                     --
+    --               BUILT-IN TABS                           --
     --=======================================================--
-
-    --==[ HOME ]==--
-    local Home=AddTab("Home","⌂")
-    Home:Section("Overview")
-    Home:Info("User", LocalPlayer.Name)
-    Home:Info("Display Name", LocalPlayer.DisplayName)
-    Home:Info("User ID", tostring(LocalPlayer.UserId))
-    Home:Info("Account Age", LocalPlayer.AccountAge.." days")
-    Home:Info("Game ID", tostring(game.PlaceId))
-    Home:Info("Executor", GetExecutor())
-    Home:Info("Hub Version", Config.HubVersion)
-    Home:Divider()
-    Home:Section("Quick Actions")
-    Home:Button("View Profile", function()
-        ProfileOverlay.Visible=true
+    local Home=MakeTab("Home","⌂")
+    Home:Section("Welcome")
+    Home:Label("Phantom Hack — GUI Template. External scripts add their own tabs.")
+    Home:Label("Player: "..LP.Name.."  •  Executor: "..ExecName.."  •  Place: "..tostring(game.PlaceId))
+    Home:Separator()
+    Home:Button("Copy Loadstring",function()
+        pcall(function() if setclipboard then setclipboard('loadstring(game:HttpGet("'..C.KeyLink..'"))()') end end)
+        Notify("Copied","Loadstring copied.",3,"success")
     end)
-    Home:Button("Show Keybinds", function()
-        KbOverlay.Visible=true
-    end)
-    Home:Button("Rejoin Server", function()
-        Notify("Rejoin","Rejoining server...",2,"warning")
-        pcall(function()
-            game:GetService("TeleportService"):Teleport(game.PlaceId,LocalPlayer)
-        end)
-    end)
-    Home:Button("Copy Profile Link", function()
-        pcall(function()
-            if setclipboard then
-                setclipboard("https://www.roblox.com/users/"..LocalPlayer.UserId.."/profile")
-            end
-        end)
-        Notify("Copied","Roblox profile link copied.",2,"success")
+    Home:Button("Rejoin Server",function()
+        pcall(function() game:GetService("TeleportService"):Teleport(game.PlaceId,LP) end)
+        Notify("Rejoin","Rejoining...",3,"info")
     end)
 
-    --==[ SETTINGS ]==--
-    local SettingsTab=AddTab("Settings","⚙")
-    SettingsTab:Section("Appearance")
+    local KB=MakeTab("Keybinds","⌨")
+    KB:Section("Menu Controls")
+    KB:Keybind("Toggle Menu",Enum.KeyCode.RightShift,function() if Main then Main.Visible=not Main.Visible end end)
+    KB:Keybind("Close Menu",Enum.KeyCode.Delete,function() tw(Main,.25,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In);task.wait(.28);Gui:Destroy() end)
+    KB:Section("Custom Slots")
+    KB:Keybind("Custom Slot 1",Enum.KeyCode.Unknown,function() Notify("Custom","Slot 1 fired.",2) end)
+    KB:Keybind("Custom Slot 2",Enum.KeyCode.Unknown,function() Notify("Custom","Slot 2 fired.",2) end)
+    KB:Keybind("Custom Slot 3",Enum.KeyCode.Unknown,function() Notify("Custom","Slot 3 fired.",2) end)
+    KB:Separator()
+    KB:Label("Click a bind button then press any key to rebind.")
 
-    local accentColors={
-        Red=Color3.fromRGB(220,30,40),
-        Blue=Color3.fromRGB(88,130,255),
-        Purple=Color3.fromRGB(138,99,255),
-        Cyan=Color3.fromRGB(40,200,220),
-        Green=Color3.fromRGB(60,200,110),
-        Orange=Color3.fromRGB(255,140,40),
-    }
+    local UP=MakeTab("Updates","↑")
+    UP:Section("Current  —  "..C.Version)
+    UP:Button("Check for Updates",function() Notify("Up to Date","Running "..C.Version,4,"success") end)
+    UP:Separator()
+    UP:Section("Changelog  v1.0.2")
+    UP:Label("• Removed ALL red/colored bars and stripes")
+    UP:Label("• Accent used only on: logo box, avatar ring, toggles, active tab indicator")
+    UP:Label("• Minimize: compact 340px topbar-only, all panels hidden")
+    UP:Label("• Notifications: slide in/out from right with progress bar")
+    UP:Label("• Module API: external scripts call PH:Tab() to add pages")
 
-    SettingsTab:Dropdown("Accent Color",{"Red","Blue","Purple","Cyan","Green","Orange"},"Red",function(c)
-        SetAccent(accentColors[c] or Config.Accent)
-        Notify("Theme","Accent color updated to "..c,2,"success")
-        -- live update all visible accent elements
-        for _,td in ipairs(AllTabs) do
-            if td.Bar.Visible then
-                td.Bar.BackgroundColor3=GetAccent()
-                tw(td.Ico,0,{TextColor3=GetAccent()})
-            end
-        end
+    local ST=MakeTab("Settings","◎")
+    ST:Section("Accent Color")
+    ST:Dropdown("Theme",{"Red","Blue","Purple","Green","Orange","Pink","Cyan"},"Red",function(choice)
+        local p=AccentPresets[choice]
+        if p then C.Accent=p[1];C.AccentH=p[2];C.AccentDim=Color3.new(p[1].R*.35,p[1].G*.35,p[1].B*.35) end
+        Notify("Theme","Color changed to "..choice,2,"success")
+    end)
+    ST:Separator()
+    ST:Section("Window")
+    ST:Toggle("Transparent Window",false,function(s)
+        if Main then tw(Main,.2,{BackgroundTransparency=s and 0.12 or 0}) end
+        Notify("Transparency",s and "On" or "Off",2)
+    end)
+    ST:Separator()
+    ST:Section("Data")
+    ST:Button("Save Config",function() Notify("Config","Saved.",2,"success") end)
+    ST:Button("Load Config",function() Notify("Config","Loaded.",2,"success") end)
+    ST:Button("Reset Config",function() Notify("Config","Reset.",2,"warning") end)
+    ST:Separator()
+    ST:Button("Copy Discord",function()
+        pcall(function() if setclipboard then setclipboard("https://discord.gg/phantomhack") end end)
+        Notify("Discord","Invite copied.",2,"success")
+    end)
+    ST:Button("Unload",function()
+        tw(Main,.25,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In)
+        task.wait(.28);Gui:Destroy()
     end)
 
-    SettingsTab:Toggle("Show Notifications", true, function(s)
-        -- Note: handled internally
-    end)
-
-    SettingsTab:Section("Keybinds")
-    SettingsTab:Keybind("Toggle Menu", Enum.KeyCode.RightShift, function() end)
-    SettingsTab:Button("View All Keybinds", function() KbOverlay.Visible=true end)
-
-    SettingsTab:Section("System Info")
-    SettingsTab:Info("Executor", GetExecutor())
-    SettingsTab:Info("Ping", "—")
-    SettingsTab:Info("FPS", "—")
-
-    -- Live FPS/Ping update
-    local fpsInfo, pingInfo
-    for _,c in ipairs(SettingsTab) do end -- placeholder; we use direct refs below
-    -- We'll update via RunService in a moment
-
-    SettingsTab:Divider()
-    SettingsTab:Section("Hub")
-    SettingsTab:Button("Copy Discord", function()
-        pcall(function() if setclipboard then setclipboard(Config.Discord) end end)
-        Notify("Discord","Invite link copied to clipboard.",3,"success")
-    end)
-    SettingsTab:Button("Unload Hub", function()
-        Notify("Unloading","Phantom Hack is unloading...",2,"warning")
-        task.wait(0.4)
-        tw(Main,0.28,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In)
-        task.wait(0.3); Gui:Destroy()
-    end)
-
-    --==[ UPDATE TAB ]==--
-    local UpdateTab=AddTab("Updates","↑")
-    UpdateTab:Section("Current Version")
-    UpdateTab:Info("Version", Config.HubVersion)
-    UpdateTab:Info("Status", "Up to date")
-    UpdateTab:Info("Last Check", "Just now")
-    UpdateTab:Divider()
-    UpdateTab:Section("Changelog — "..Config.HubVersion)
-    local changelogItems={
-        "✦  Full rebrand to Phantom Hack",
-        "✦  Red/white dark color palette",
-        "✦  Roblox avatar loading",
-        "✦  Profile viewer overlay",
-        "✦  Keybind system + viewer",
-        "✦  Live accent color switching",
-        "✦  Executor detection",
-        "✦  Slide-out notifications (no flicker)",
-        "✦  Compact minimize (sidebar width only)",
-        "✦  Template-ready: drop in your scripts",
-    }
-    for _,item in ipairs(changelogItems) do
-        UpdateTab:Section(item)
-    end
-    UpdateTab:Divider()
-    UpdateTab:Button("Check for Updates", function()
-        Notify("Update Check","Checking for latest version...",2,"warning")
-        task.wait(1.5)
-        Notify("Up to Date","You are running the latest version.",3,"success")
-    end)
-    UpdateTab:Button("Copy Key Link", function()
-        pcall(function() if setclipboard then setclipboard(Config.KeyLink) end end)
-        Notify("Copied","Key link copied.",2,"success")
-    end)
-
-    --==[ MISC TAB ]==--
-    local Misc=AddTab("Misc","✦")
-    Misc:Section("Utility")
-    Misc:Toggle("Anti-AFK", false, function(s)
-        if s then
-            LocalPlayer.Idled:Connect(function()
-                LocalPlayer:Move(Vector3.new(0,0,0))
-            end)
-        end
-    end)
-    Misc:Toggle("Hide Player List", false, function(s)
-        pcall(function()
-            local ps=LocalPlayer.PlayerGui:FindFirstChild("PlayerListGui")
-            if ps then ps.Enabled=not s end
-        end)
-    end)
-    Misc:Button("Rejoin Server", function()
-        pcall(function()
-            game:GetService("TeleportService"):Teleport(game.PlaceId,LocalPlayer)
-        end)
-    end)
-    Misc:Button("Copy Profile URL", function()
-        pcall(function()
-            if setclipboard then
-                setclipboard("https://www.roblox.com/users/"..LocalPlayer.UserId.."/profile")
-            end
-        end)
-        Notify("Copied","Profile URL copied.",2,"success")
-    end)
-
-    Misc:Section("Fun")
-    Misc:Toggle("Third Person Lock", false, function(s)
-        pcall(function()
-            workspace.CurrentCamera.CameraType = s
-                and Enum.CameraType.Attach
-                or  Enum.CameraType.Custom
-        end)
-    end)
-    Misc:Slider("Field of View", 60, 120, 70, function(v)
-        pcall(function() workspace.CurrentCamera.FieldOfView=v end)
-    end)
-
-    Misc:Section("Debug")
-    Misc:Info("Place Name", game.Name ~= "" and game.Name or "Unknown")
-    Misc:Info("Place ID", tostring(game.PlaceId))
-    Misc:Info("Job ID", string.sub(tostring(game.JobId),1,12).."...")
-
-    -- Select first tab
-    SetTab(AllTabs[1])
-
-    --==[ GLOBAL KEYBIND LISTENER ]==--
-    UserInputService.InputBegan:Connect(function(input, gpe)
+    --==[ GLOBAL KEYBIND HANDLER ]==--
+    UserInputService.InputBegan:Connect(function(input,gpe)
         if gpe then return end
-        -- Toggle menu
-        if input.KeyCode==Config.ToggleKey then
-            Main.Visible=not Main.Visible
-            return
-        end
-        -- F2 = keybinds panel
-        if input.KeyCode==Enum.KeyCode.F2 then
-            if Main.Visible then KbOverlay.Visible=not KbOverlay.Visible end
-            return
-        end
-        -- Fire registered keybinds
-        for _,kb in ipairs(Keybinds) do
-            if kb.key==input.KeyCode and kb.callback then
-                pcall(kb.callback)
-            end
+        for _,bind in pairs(Keybinds) do
+            if bind.key==input.KeyCode then pcall(bind.cb) end
         end
     end)
 
-end -- BuildMain
+    --[[
+        ═══════════════════════════════════════════════════
+        PUBLIC API — returned so external scripts can use it
+        
+        Usage in Core.lua or any other script:
+        
+            local PH = loadstring(game:HttpGet("YOUR_URL"))()
+            
+            local MyTab = PH:Tab("Combat", "⚔")
+            MyTab:Toggle("Kill Aura", false, function(on) end)
+            MyTab:Slider("Speed", 16, 200, 16, function(v) end)
+            MyTab:Dropdown("Mode", {"Auto","Manual"}, "Auto", function(v) end)
+            MyTab:Button("Do Something", function() end)
+            
+            PH:Notify("Test", "Hello!", 3, "success")
+        ═══════════════════════════════════════════════════
+    --]]
+    return {
+        Tab    = MakeTab,
+        Notify = Notify,
+        Config = C,
+    }
+end
 
-Notify("Phantom Hack","Loaded  •  RightShift to toggle  •  F2 for keybinds",5,"success")
+--==[ TOGGLE HOTKEY ]==--
+UserInputService.InputBegan:Connect(function(input,gpe)
+    if gpe then return end
+    if input.KeyCode==C.ToggleKey then
+        if Main then Main.Visible=not Main.Visible end
+    end
+end)
+
+task.wait(.4)
+Notify("Phantom Hack","Loaded  •  RightShift to toggle",5,"success")
