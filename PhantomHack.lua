@@ -41,9 +41,12 @@ local BRAND = {
     Version    = "v1.2.0",
     ToggleKey  = Enum.KeyCode.RightShift,
     KeysURL    = "https://raw.githubusercontent.com/Le-Oreo/PhantomHack/main/keys.json",
-    -- Set this to your logo image URL (raw GitHub link to a PNG/JPG)
-    -- Leave as "" to use the letter fallback
+    -- Logo: upload a PNG to your GitHub repo and set these two values.
+    -- LogoURL  = raw GitHub URL to the image file
+    -- LogoFile = any local filename to cache it under (must end in .png/.jpg)
+    -- Leave LogoURL as "" to use the letter fallback.
     LogoURL    = "",
+    LogoFile   = "ph_logo.png",
     -- Offline fallback keys (used if GitHub is unreachable)
     OfflineKeys = {},
 }
@@ -213,39 +216,89 @@ local function drag(frame,handle)
 end
 
 --==[ LOGO HELPER ]==--
--- Creates either an ImageLabel (if URL set) or a TextLabel fallback
-local function makeLogo(parent, size, pos, anchor)
-    local frame=inst("Frame",{
-        Position=pos or UDim2.new(0,0,0,0),
-        AnchorPoint=anchor or Vector2.new(0,0),
-        Size=size or UDim2.new(0,32,0,32),
-        BackgroundColor3=C.Accent,
-        BorderSizePixel=0,Parent=parent,
-    },{crn(8)})
-    trackAccent(frame,"BackgroundColor3")
+--[[
+    HOW THE LOGO WORKS:
+    Roblox ImageLabel.Image does NOT accept raw HTTPS URLs directly.
+    To use a custom image from GitHub:
+      1. Set BRAND.LogoURL  = raw GitHub URL to your PNG
+      2. Set BRAND.LogoFile = a local filename (e.g. "logo.png")
+    The script downloads it, saves it with writefile(), then loads
+    it with getcustomasset() / getsynasset().
+    Requires your executor to support writefile + getcustomasset.
+    Falls back to the first letter of your hub name if unavailable.
+--]]
 
-    if BRAND.LogoURL and BRAND.LogoURL~="" then
-        -- Try to load image from GitHub
-        local img=inst("ImageLabel",{
-            Size=UDim2.new(1,0,1,0),
-            BackgroundTransparency=1,
-            Image=BRAND.LogoURL,
-            ScaleType=Enum.ScaleType.Fit,
-            Parent=frame,
-        })
-        -- If image fails to load, the P fallback stays underneath
-        inst("TextLabel",{
-            Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
-            Text="P",TextColor3=Color3.new(1,1,1),Font=C.FontB,TextSize=18,
-            Visible=false,Parent=frame,  -- hidden, only shown if img fails
-        })
-    else
-        inst("TextLabel",{
-            Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
-            Text="P",TextColor3=Color3.new(1,1,1),Font=C.FontB,TextSize=18,
-            Parent=frame,
-        })
+local LogoAssetPath = nil
+
+local function preloadLogo()
+    if not BRAND.LogoURL or BRAND.LogoURL == "" then return end
+    if not BRAND.LogoFile or BRAND.LogoFile == "" then
+        BRAND.LogoFile = "ph_logo.png"
     end
+    task.spawn(function()
+        pcall(function()
+            local imageData = game:HttpGet(BRAND.LogoURL, true)
+            if not imageData or imageData == "" then return end
+            if writefile then
+                writefile(BRAND.LogoFile, imageData)
+            else
+                return
+            end
+            if getcustomasset then
+                LogoAssetPath = getcustomasset(BRAND.LogoFile)
+            elseif getsynasset then
+                LogoAssetPath = getsynasset(BRAND.LogoFile)
+            end
+        end)
+    end)
+end
+
+preloadLogo()
+
+local function makeLogo(parent, size, pos, anchor)
+    local frame = inst("Frame", {
+        Position         = pos    or UDim2.new(0, 0, 0, 0),
+        AnchorPoint      = anchor or Vector2.new(0, 0),
+        Size             = size   or UDim2.new(0, 32, 0, 32),
+        BackgroundColor3 = C.Accent,
+        BorderSizePixel  = 0,
+        Parent           = parent,
+    }, {crn(8)})
+    trackAccent(frame, "BackgroundColor3")
+
+    local letter = string.upper(string.sub(BRAND.Name, 1, 1))
+    local textFallback = inst("TextLabel", {
+        Size               = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text               = letter,
+        TextColor3         = Color3.new(1, 1, 1),
+        Font               = C.FontB,
+        TextSize           = 18,
+        Parent             = frame,
+    })
+
+    if BRAND.LogoURL and BRAND.LogoURL ~= "" then
+        local img = inst("ImageLabel", {
+            Size               = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            Image              = "",
+            ScaleType          = Enum.ScaleType.Fit,
+            Visible            = false,
+            Parent             = frame,
+        })
+        task.spawn(function()
+            local waited = 0
+            while LogoAssetPath == nil and waited < 10 do
+                task.wait(0.2); waited = waited + 0.2
+            end
+            if LogoAssetPath then
+                img.Image            = LogoAssetPath
+                img.Visible          = true
+                textFallback.Visible = false
+            end
+        end)
+    end
+
     return frame
 end
 
