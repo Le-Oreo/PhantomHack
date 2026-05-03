@@ -17,9 +17,9 @@
       "lastSeen": "2026-05-03T21:14:58.620Z",
       "uses": 1,
       "revoked": false,
-      "revokedReason": "Blacklisted: Key sharing detected",
+      "revokedReason": null,
       "blacklisted": false,
-      "blacklistReason": "Key sharing detected",
+      "blacklistReason": null,
       "generatedAt": "2026-05-03T21:12:06.933Z",
       "generatedBy": "oreotheant"
     }
