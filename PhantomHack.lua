@@ -1,19 +1,19 @@
 --[[
 ╔══════════════════════════════════════════════════════════════╗
-║            PHANTOM HACK — GUI Template v1.2.0               ║
-║                                                             ║
-║  Fixes in this version:                                     ║
-║  • Minimized bar: no overflow, compact and clean            ║
-║  • Accent color change: instantly recolors EVERYTHING       ║
-║  • Logo: loads image from GitHub URL or falls back to text  ║
-║  • All corners fully rounded everywhere                     ║
-║  • Cleaner component styling                                ║
-║                                                             ║
-║  HOW TO USE (like Rayfield):                                ║
-║    local M = loadstring(game:HttpGet(PHANTOMHACK_URL))()    ║
-║    local PH = M.WaitForAuth()                               ║
-║    local Tab = PH:Tab("Combat","⚔")                        ║
-║    Tab:Toggle("Kill Aura",false,function(on) end)           ║
+║            PHANTOM HACK — GUI Template v1.2.0                ║
+║                                                              ║
+║  Fixes in this version:                                      ║
+║  • Minimized bar: no overflow, compact and clean             ║
+║  • Accent color change: instantly recolors EVERYTHING        ║
+║  • Logo: loads image from GitHub URL or falls back to text   ║
+║  • All corners fully rounded everywhere                      ║
+║  • Cleaner component styling                                 ║
+║                                                              ║
+║  HOW TO USE (like Rayfield):                                 ║
+║    local M = loadstring(game:HttpGet(PHANTOMHACK_URL))()     ║
+║    local PH = M.WaitForAuth()                                ║
+║    local Tab = PH:Tab("Combat","⚔")                          ║
+║    Tab:Toggle("Kill Aura",false,function(on) end)            ║
 ╚══════════════════════════════════════════════════════════════╝
 
 LOGO / BRANDING:
