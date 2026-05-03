@@ -1,19 +1,19 @@
 --[[
 ╔══════════════════════════════════════════════════════════════╗
-║            PHANTOM HACK — GUI Template v1.2.0                ║
-║                                                              ║
-║  Fixes in this version:                                      ║
-║  • Minimized bar: no overflow, compact and clean             ║
-║  • Accent color change: instantly recolors EVERYTHING        ║
-║  • Logo: loads image from GitHub URL or falls back to text   ║
-║  • All corners fully rounded everywhere                      ║
-║  • Cleaner component styling                                 ║
-║                                                              ║
-║  HOW TO USE (like Rayfield):                                 ║
-║    local M = loadstring(game:HttpGet(PHANTOMHACK_URL))()     ║
-║    local PH = M.WaitForAuth()                                ║
-║    local Tab = PH:Tab("Combat","⚔")                          ║
-║    Tab:Toggle("Kill Aura",false,function(on) end)            ║
+║            PHANTOM HACK — GUI Template v1.2.0               ║
+║                                                             ║
+║  Fixes in this version:                                     ║
+║  • Minimized bar: no overflow, compact and clean            ║
+║  • Accent color change: instantly recolors EVERYTHING       ║
+║  • Logo: loads image from GitHub URL or falls back to text  ║
+║  • All corners fully rounded everywhere                     ║
+║  • Cleaner component styling                                ║
+║                                                             ║
+║  HOW TO USE (like Rayfield):                                ║
+║    local M = loadstring(game:HttpGet(PHANTOMHACK_URL))()    ║
+║    local PH = M.WaitForAuth()                               ║
+║    local Tab = PH:Tab("Combat","⚔")                        ║
+║    Tab:Toggle("Kill Aura",false,function(on) end)           ║
 ╚══════════════════════════════════════════════════════════════╝
 
 LOGO / BRANDING:
@@ -45,9 +45,14 @@ local BRAND = {
     -- then paste the asset ID number here.
     -- Example: if your decal URL is roblox.com/library/12345678 then set LogoID = "12345678"
     -- Leave as "" to use the letter fallback (shows first letter of hub name).
-    LogoID     = "95953991455279",
+    LogoID     = "76539186831987",
     -- Offline fallback keys (used if GitHub is unreachable)
-    OfflineKeys = {},
+    -- These are TEMPORARY test keys — delete or change them when you go live
+    OfflineKeys = {
+        "PHANTOM-FREE-TEST",      -- Free tier test key
+        "PHANTOM-PREM-TEST",      -- Premium tier test key  
+        "PHANTOM-2026",           -- Legacy fallback
+    },
 }
 
 --==[ EXECUTOR DETECT ]==--
@@ -233,14 +238,31 @@ local function makeLogo(parent, size, pos, anchor)
     local letter = string.upper(string.sub(BRAND.Name, 1, 1))
 
     if BRAND.LogoID and BRAND.LogoID ~= "" then
-        -- Use Roblox asset ID directly — works instantly, no downloads needed
-        inst("ImageLabel", {
+        -- For Decal assets uploaded via create.roblox.com, we need to fetch
+        -- the actual image asset ID from inside the decal using AssetService.
+        -- This runs async so the letter shows first then swaps to the image.
+        local img = inst("ImageLabel", {
             Size                  = UDim2.new(1, 0, 1, 0),
             BackgroundTransparency= 1,
-            Image                 = "rbxassetid://" .. BRAND.LogoID,
+            Image                 = "",
             ScaleType             = Enum.ScaleType.Fit,
+            Visible               = false,
             Parent                = frame,
         })
+        task.spawn(function()
+            -- Method 1: try direct rbxassetid (works if uploaded as Image not Decal)
+            img.Image   = "rbxassetid://" .. BRAND.LogoID
+            img.Visible = true
+            task.wait(2)
+            -- If image still blank (ContentId empty), try fetching via InsertService
+            if img.ImageContent == "" or not img.IsLoaded then
+                pcall(function()
+                    local AS = game:GetService("AssetService")
+                    -- For a Decal, the image is at the asset URL directly
+                    img.Image = "https://assetdelivery.roblox.com/v1/asset/?id=" .. BRAND.LogoID
+                end)
+            end
+        end)
     else
         -- Fallback: first letter of the hub name
         inst("TextLabel", {
@@ -263,10 +285,19 @@ end
 local function validateKey(entered)
     local ok,raw=pcall(function() return game:HttpGet(BRAND.KeysURL,true) end)
     if not ok or not raw or raw=="" then
+        -- Offline fallback — assign tier based on key prefix
+        local offlineTiers = {
+            ["PHANTOM-FREE-TEST"]  = "Free",
+            ["PHANTOM-PREM-TEST"]  = "Premium",
+            ["PHANTOM-2026"]       = "Premium",
+        }
         for _,k in ipairs(BRAND.OfflineKeys) do
-            if entered==k then return true,"Free",nil,nil end
+            if entered==k then
+                local tier = offlineTiers[k] or "Free"
+                return true, tier, nil, nil
+            end
         end
-        return false,nil,nil,"Could not reach key server."
+        return false,nil,nil,"Could not reach key server. Check your connection."
     end
     local pok,data=pcall(function() return HttpService:JSONDecode(raw) end)
     if not pok or not data or not data.keys then
