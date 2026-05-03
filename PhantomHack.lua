@@ -612,43 +612,40 @@ function BuildMain(tier, expiresAt)
     ValidatedTier   = tier   or "Free"
     ValidatedExpiry = expiresAt
 
-    -- Main window — NO ClipsDescendants so UICorner shows properly
-    -- Corner roundness is achieved with a UICorner on the frame itself
-    -- The border is a separate UIStroke
-    Main=inst("Frame",{
-        Name="Main",AnchorPoint=Vector2.new(.5,.5),
+    -- CORRECT corner approach:
+    -- Outer frame: has UICorner + UIStroke, NO background, NO ClipsDescendants
+    -- Inner frame: has ClipsDescendants=true, clips all children neatly
+    -- This gives rounded corners AND proper clipping without the green box bug.
+    local Outer=inst("Frame",{
+        Name="MainOuter",AnchorPoint=Vector2.new(.5,.5),
         Position=UDim2.new(.5,0,.5,0),Size=UDim2.new(0,0,0,0),
-        BackgroundColor3=C.BG,BorderSizePixel=0,
-        ClipsDescendants=false,  -- MUST be false for corners to show
-        Parent=Gui,
+        BackgroundTransparency=1,BorderSizePixel=0,Parent=Gui,
     },{crn(12),bdr(C.Bdr)})
-    tw(Main,.45,{Size=UDim2.new(0,C.W,0,C.H)},Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+    tw(Outer,.45,{Size=UDim2.new(0,C.W,0,C.H)},Enum.EasingStyle.Back,Enum.EasingDirection.Out)
 
-    -- Corner mask overlay — sits on top (ZIndex high), covers the inner
-    -- edges where child frames bleed past the rounded corners.
-    -- It's a transparent frame with UICorner that visually hides overflow.
-    local cornerMask=inst("Frame",{
-        Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
-        BorderSizePixel=0,ZIndex=100,Parent=Main,
+    Main=inst("Frame",{
+        Name="Main",Size=UDim2.new(1,0,1,0),
+        BackgroundColor3=C.BG,BorderSizePixel=0,
+        ClipsDescendants=true,Parent=Outer,
     },{crn(12)})
-    -- We also add a UIStroke on the mask to reinforce the border
-    inst("UIStroke",{Color=C.Bdr,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border,Parent=cornerMask})
+
+    -- Mirror size changes from Outer to Main for minimize/restore
+    -- (we tween Outer, Main follows via Size=1,0,1,0)
 
     --==[ TOPBAR ]==--
     local TB=inst("Frame",{
         Name="TopBar",Size=UDim2.new(1,0,0,C.TH),
         BackgroundColor3=C.Side,BorderSizePixel=0,Parent=Main,
-    },{crn(12)})
-    -- Square ONLY the bottom corners of the topbar
-    -- by placing a covering frame over the bottom-left and bottom-right corners
+    })
+    -- Square bottom corners of topbar
     inst("Frame",{
         Position=UDim2.new(0,0,1,-12),Size=UDim2.new(1,0,0,12),
-        BackgroundColor3=C.Side,BorderSizePixel=0,Parent=TB,ZIndex=2,
+        BackgroundColor3=C.Side,BorderSizePixel=0,Parent=TB,
     })
-    -- Bottom border line
+    -- Bottom border
     inst("Frame",{
         Position=UDim2.new(0,0,1,0),AnchorPoint=Vector2.new(0,1),
-        Size=UDim2.new(1,0,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=TB,ZIndex=2,
+        Size=UDim2.new(1,0,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=TB,
     })
 
     -- Logo box
@@ -698,10 +695,10 @@ function BuildMain(tier, expiresAt)
             if SideScroll2 then SideScroll2.Visible=false end
             if CA2         then CA2.Visible=false         end
             if UC2         then UC2.Visible=false         end
-            tw(Main,.25,{Size=UDim2.new(0,420,0,C.TH)})
+            tw(Outer,.25,{Size=UDim2.new(0,420,0,C.TH)})
             BMin.Text="□"
         else
-            tw(Main,.3,{Size=UDim2.new(0,C.W,0,C.H)},Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+            tw(Outer,.3,{Size=UDim2.new(0,C.W,0,C.H)},Enum.EasingStyle.Back,Enum.EasingDirection.Out)
             BMin.Text="–"
             task.delay(.28,function()
                 if SideBG2     then SideBG2.Visible=true    end
@@ -712,10 +709,10 @@ function BuildMain(tier, expiresAt)
         end
     end)
     BClose.MouseButton1Click:Connect(function()
-        tw(Main,.25,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In)
+        tw(Outer,.25,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In)
         task.wait(.28);Gui:Destroy()
     end)
-    drag(Main,TB)
+    drag(Outer,TB)
 
     --==[ SIDEBAR ]==--
     SideBG2=inst("Frame",{Name="SideBG",Position=UDim2.new(0,0,0,C.TH),Size=UDim2.new(0,C.SW,1,-C.TH),BackgroundColor3=C.Side,BorderSizePixel=0,Parent=Main},{
@@ -1003,7 +1000,7 @@ end)
 UserInputService.InputBegan:Connect(function(input,gpe)
     if gpe then return end
     if input.KeyCode==BRAND.ToggleKey then
-        if Main then Main.Visible = not Main.Visible end
+        if Outer then Outer.Visible = not Outer.Visible end
     end
 end)
 
