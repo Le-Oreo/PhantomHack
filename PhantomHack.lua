@@ -40,12 +40,21 @@ local BRAND = {
     Name       = "PHANTOM HACK",
     Version    = "v1.2.0",
     ToggleKey  = Enum.KeyCode.RightShift,
-    KeysURL    = "https://raw.githubusercontent.com/Le-Oreo/PhantomHack/main/keys.json",
+    -- Backend server URL (your deployed server.js)
+    -- e.g. "https://phantom-backend.railway.app"
+    BackendURL = "",
+    -- Secret must match API_SECRET in server.js env vars
+    APISecret  = "phantom_secret_change_me",
     -- Logo: upload your image to Roblox (a Decal or Image asset),
     -- then paste the asset ID number here.
     -- Example: if your decal URL is roblox.com/library/12345678 then set LogoID = "12345678"
     -- Leave as "" to use the letter fallback (shows first letter of hub name).
     LogoID     = "110187797072022",
+    -- HWID registration endpoint — your bot's HTTP server URL
+    -- Set this to your deployed bot URL e.g. "https://your-bot.railway.app"
+    -- Leave as "" to skip server-side HWID binding (client-only check still runs)
+    HWIDEndpoint = "",
+
     -- Offline / fallback keys — these ALWAYS work, even without internet
     -- Delete or change these when you go live
     OfflineKeys = {
@@ -69,6 +78,90 @@ local function getExec()
     return "Unknown"
 end
 local ExecName = getExec()
+
+--==[ HWID ]==--
+-- Get a unique hardware identifier for this machine
+-- Used to lock keys to a single device
+local function getHWID()
+    -- Try executor-specific HWID functions
+    if gethwid         then local ok,h=pcall(gethwid);         if ok and h and h~="" then return tostring(h) end end
+    if hwid            then local ok,h=pcall(hwid);            if ok and h and h~="" then return tostring(h) end end
+    if getmacaddress   then local ok,h=pcall(getmacaddress);   if ok and h and h~="" then return tostring(h) end end
+    if get_hwid        then local ok,h=pcall(get_hwid);        if ok and h and h~="" then return tostring(h) end end
+    -- Fallback: combine UserId + game.JobId as a semi-unique identifier
+    -- Not true HWID but better than nothing if executor doesn't expose one
+    return tostring(game:GetService("Players").LocalPlayer.UserId)
+end
+local HWID = getHWID()
+
+--==[ AUTO-LOGIN & CONFIG SAVE ]==--
+-- Files saved in the executor's workspace folder:
+--   PhantomHack_key.txt    — saved license key for auto-login
+--   PhantomHack_cfg.json   — saved config (toggles, sliders, theme)
+local KEY_FILE = "PhantomHack_key.txt"
+local CFG_FILE = "PhantomHack_cfg.json"
+
+local function fileRead(name)
+    if not isfile then return nil end
+    local ok,data = pcall(function() return isfile(name) and readfile(name) or nil end)
+    return ok and data or nil
+end
+
+local function fileWrite(name, data)
+    if not writefile then return false end
+    local ok = pcall(function() writefile(name, data) end)
+    return ok
+end
+
+local function fileDel(name)
+    if not delfile then return end
+    pcall(function() if isfile and isfile(name) then delfile(name) end end)
+end
+
+local function loadSavedKey()
+    local raw = fileRead(KEY_FILE)
+    if raw and raw ~= "" then return raw:gsub("%s+","") end
+    return nil
+end
+
+local function saveKey(key)
+    fileWrite(KEY_FILE, key)
+end
+
+local function clearKey()
+    fileDel(KEY_FILE)
+end
+
+-- Config: table of {name → value} for all toggles/sliders
+local SavedConfig = {}
+local ConfigCallbacks = {}  -- name → callback to re-apply on load
+
+local function loadConfig()
+    local raw = fileRead(CFG_FILE)
+    if not raw or raw == "" then return {} end
+    local ok,t = pcall(function() return game:GetService("HttpService"):JSONDecode(raw) end)
+    return ok and t or {}
+end
+
+local function saveConfig()
+    local ok = pcall(function()
+        fileWrite(CFG_FILE, game:GetService("HttpService"):JSONEncode(SavedConfig))
+    end)
+    return ok
+end
+
+-- Register a config entry — called when toggles/sliders are created
+local function regCfg(name, default, callback)
+    local saved = SavedConfig[name]
+    if saved ~= nil then
+        -- Restore saved value
+        pcall(function() callback(saved) end)
+        return saved
+    end
+    SavedConfig[name] = default
+    ConfigCallbacks[name] = callback
+    return default
+end
 
 --==[ THEME ]==--
 -- All accent-colored objects are registered in AccentObjects so
@@ -279,39 +372,63 @@ end
 --              KEY VALIDATION                           --
 --=======================================================--
 local function validateKey(entered)
-    -- Always check offline/fallback keys FIRST — instant, no HTTP needed
+    -- Check offline/fallback keys first (instant, no server needed)
     local offlineTiers = {
-        ["PHANTOM-FREE-TEST"]  = "Free",
-        ["PHANTOM-PREM-TEST"]  = "Premium",
-        ["PHANTOM-2026"]       = "Premium",
-        ["PHANTOM-FREE"]       = "Free",
-        ["PHANTOM-VIP"]        = "Premium",
+        ["PHANTOM-FREE-TEST"] = "Free",  ["PHANTOM-PREM-TEST"] = "Premium",
+        ["PHANTOM-2026"]      = "Premium",["PHANTOM-FREE"]      = "Free",
+        ["PHANTOM-VIP"]       = "Premium",
     }
     for _,k in ipairs(BRAND.OfflineKeys) do
-        if entered == k then
-            return true, (offlineTiers[k] or "Free"), nil, nil
-        end
+        if entered==k then return true,(offlineTiers[k] or "Free"),nil,nil end
     end
 
-    -- Then try GitHub live validation
-    local ok,raw=pcall(function() return game:HttpGet(BRAND.KeysURL,true) end)
-    if not ok or not raw or raw=="" then
+    -- Need a backend
+    if not BRAND.BackendURL or BRAND.BackendURL=="" then
+        return false,nil,nil,"No backend configured. Set BackendURL in BRAND config."
+    end
+
+    -- POST /auth to backend
+    local ok,result = pcall(function()
+        local body = HttpService:JSONEncode({
+            key         = entered,
+            hwid        = HWID,
+            roblox_id   = tostring(LP.UserId),
+            roblox_name = LP.Name,
+            executor    = ExecName,
+            place_id    = tostring(game.PlaceId),
+        })
+        -- Try POST first (syn.request / request / http_request)
+        local reqFunc = (syn and syn.request) or request or http_request or (http and http.request)
+        if reqFunc then
+            local res = reqFunc({
+                Url     = BRAND.BackendURL.."/auth",
+                Method  = "POST",
+                Headers = {["Content-Type"]="application/json",["x-secret"]=BRAND.APISecret or ""},
+                Body    = body,
+            })
+            return HttpService:JSONDecode(res.Body)
+        else
+            -- GET fallback
+            local HS  = HttpService
+            local url = BRAND.BackendURL.."/auth"
+                .."?key="       ..HS:UrlEncode(entered)
+                .."&hwid="      ..HS:UrlEncode(HWID or "")
+                .."&roblox_id=" ..tostring(LP.UserId)
+                .."&executor="  ..HS:UrlEncode(ExecName)
+                .."&secret="    ..(BRAND.APISecret or "")
+            return HttpService:JSONDecode(game:HttpGet(url,true))
+        end
+    end)
+
+    if not ok or not result then
         return false,nil,nil,"Could not reach key server. Check your connection."
     end
-    local pok,data=pcall(function() return HttpService:JSONDecode(raw) end)
-    if not pok or not data or not data.keys then
-        return false,nil,nil,"Key server returned invalid data."
+    if not result.ok then
+        return false,nil,nil,(result.error or "Authentication failed.")
     end
-    local kd=data.keys[entered]
-    if not kd then return false,nil,nil,"Invalid key." end
-    if kd.revoked then return false,nil,nil,"This key has been revoked." end
-    if not kd.redeemed then return false,nil,nil,"Key not redeemed yet. Use /redeem in Discord." end
-    local expiresAt=kd.expiresAt
-    if expiresAt and os.time()>expiresAt then
-        local d=math.floor((os.time()-expiresAt)/86400)
-        return false,nil,nil,"Key expired "..(d>0 and d.."d ago." or "recently.")
-    end
-    return true,(kd.tier or "Free"),expiresAt,nil
+    -- Store result globally so auth flow can access session_token
+    _G._PH_AuthResult = result
+    return true,(result.tier or "Free"),result.expires_at,nil
 end
 
 --=======================================================--
@@ -352,6 +469,22 @@ drag(KF)
 GKBtn.MouseButton1Click:Connect(function()
     pcall(function() if setclipboard then setclipboard("https://discord.gg/phantomhack") end end)
     Notify("Discord","Join our Discord to get a key!",3,"info")
+end)
+
+-- AUTO-LOGIN: check for saved key on startup
+task.spawn(function()
+    task.wait(0.3)
+    local saved = loadSavedKey()
+    if saved and saved ~= "" then
+        KIn.Text     = saved
+        KStatus.Text = "Auto-login key found — authorizing..."
+        KStatus.TextColor3 = C.T2
+        ABtn.Text    = "Auto-login..."
+        -- Small delay so user can see the message
+        task.wait(0.8)
+        -- Fire auth
+        doAuth()
+    end
 end)
 
 --=======================================================--
@@ -608,7 +741,7 @@ local function MakeTab(name,icon,hideSidebar)
 end
 
 --=======================================================--
-function BuildMain(tier, expiresAt)
+function BuildMain(tier, expiresAt, savedKey)
     ValidatedTier   = tier   or "Free"
     ValidatedExpiry = expiresAt
 
@@ -794,8 +927,7 @@ function BuildMain(tier, expiresAt)
     --   BUILT-IN TABS — Settings only (no Keybinds tab)    --
     --=======================================================--
 
-    -- SETTINGS (accessible via sidebar AND the ⚙ button in topbar)
-    -- Settings: hidden from sidebar — only via ⚙ topbar button
+    -- SETTINGS — hidden from sidebar, accessible via ⚙ topbar button only
     local ST=MakeTab("Settings","◎",true)
 
     ST:Section("Menu Controls")
@@ -808,33 +940,77 @@ function BuildMain(tier, expiresAt)
     end)
     ST:Separator()
 
-    ST:Section("Accent Color")
-    ST:Dropdown("Theme",{"Red","Blue","Purple","Green","Orange","Pink","Cyan","White"},"Red",function(choice)
+    ST:Section("Appearance")
+    ST:Dropdown("Theme",{"Red","Blue","Purple","Green","Orange","Pink","Cyan","White"},
+        SavedConfig["Theme"] or "Red",
+    function(choice)
         local p=AccentPresets[choice]
-        if p then
-            applyAccent(p[1],p[2],p[3])
-            C.Bad=Color3.fromRGB(215,35,35)
-        end
+        if p then applyAccent(p[1],p[2],p[3]); C.Bad=Color3.fromRGB(215,35,35) end
+        SavedConfig["Theme"]=choice; saveConfig()
         Notify("Theme","Color changed to "..choice,2,"success")
     end)
-    ST:Separator()
-
-    ST:Section("Window")
-    ST:Toggle("Transparent Window",false,function(s)
+    ST:Toggle("Transparent Window",SavedConfig["TransparentWindow"] or false,function(s)
         if Main then tw(Main,.2,{BackgroundTransparency=s and 0.12 or 0}) end
-        Notify("Transparency",s and "On" or "Off",2)
+        SavedConfig["TransparentWindow"]=s; saveConfig()
     end)
     ST:Separator()
 
+    ST:Section("Configuration")
+    ST:Label("Configs are saved to your executor workspace folder.")
+    ST:Button("💾  Save Config",function()
+        if saveConfig() then
+            Notify("Config","Saved successfully!",2,"success")
+        else
+            Notify("Config","Save failed — writefile not supported.",3,"error")
+        end
+    end)
+    ST:Button("📂  Load Config",function()
+        local loaded = loadConfig()
+        if loaded and next(loaded) then
+            SavedConfig = loaded
+            for name,cb in pairs(ConfigCallbacks) do
+                local val=SavedConfig[name]
+                if val~=nil then pcall(function() cb(val) end) end
+            end
+            Notify("Config","Loaded and applied!",2,"success")
+        else
+            Notify("Config","No saved config found.",2,"warning")
+        end
+    end)
+    ST:Button("🗑  Reset Config",function()
+        SavedConfig={}; fileDel(CFG_FILE)
+        Notify("Config","Config reset. Restart to apply defaults.",3,"warning")
+    end)
+    ST:Separator()
+
+    ST:Section("Account")
+    local expText = ValidatedExpiry and fmtExpiry(ValidatedExpiry).." left" or "Lifetime"
+    ST:Label("Tier:    "..ValidatedTier.."  •  "..expText)
+    ST:Label("HWID:  "..(HWID and tostring(HWID):sub(1,20).."..." or "Unknown"))
+    ST:Button("🔑  Copy Key",function()
+        local k = savedKey or loadSavedKey() or ""
+        if k~="" then
+            pcall(function() if setclipboard then setclipboard(k) end end)
+            Notify("Key","Key copied to clipboard.",2,"success")
+        else Notify("Key","No key saved.",2,"error") end
+    end)
+    ST:Button("🚪  Sign Out  (clears saved key)",function()
+        clearKey()
+        Notify("Signed Out","Key cleared. Restart to sign in with a different key.",4,"warning")
+        task.delay(2,function()
+            tw(Outer,.25,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In)
+            task.wait(.3); Gui:Destroy()
+        end)
+    end)
+    ST:Separator()
+
+    ST:Section("Info")
     ST:Button("Copy Discord",function()
         pcall(function() if setclipboard then setclipboard("https://discord.gg/phantomhack") end end)
         Notify("Discord","Invite copied.",2,"success")
     end)
-    ST:Separator()
-    ST:Section("Credits")
     ST:Label("Phantom Hack — created by Oreo")
-    ST:Label("GUI Template  •  "..BRAND.Version)
-    ST:Label("discord.gg/phantomhack")
+    ST:Label(BRAND.Version.."  •  discord.gg/phantomhack")
     ST:Separator()
     ST:Button("Unload",function()
         tw(Outer,.25,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In)
@@ -966,13 +1142,55 @@ local function doAuth()
             KStatus.Text      = "✓ Authenticated — launching ["..tier.."]"
             KStatus.TextColor3 = C.Ok
             Notify("Welcome","Phantom Hack ["..tier.."] loading...",3,"success")
+            -- Save key for auto-login next time
+            saveKey(entered)
             task.wait(.5)
             tw(KF,.3,{Size=UDim2.new(0,440,0,0),BackgroundTransparency=1})
             task.wait(.35)
             pcall(function() KF:Destroy() end)
-            -- Build the main menu and store the returned API
-            AuthAPI  = BuildMain(tier, expiresAt)
+            -- Load saved config
+            SavedConfig = loadConfig()
+            -- Build the main menu
+            AuthAPI  = BuildMain(tier, expiresAt, entered)
             AuthDone = true
+
+            -- Start heartbeat loop to keep session alive
+            -- and detect if key gets blacklisted while in-game
+            if BRAND.BackendURL and BRAND.BackendURL ~= "" and _G._PH_AuthResult and _G._PH_AuthResult.session_token then
+                local sessionToken = _G._PH_AuthResult.session_token
+                task.spawn(function()
+                    while AuthDone and Gui and Gui.Parent do
+                        task.wait(60)
+                        pcall(function()
+                            local reqFunc = (syn and syn.request) or request or http_request or (http and http.request)
+                            local body = HttpService:JSONEncode({
+                                session_token = sessionToken,
+                                place_id      = tostring(game.PlaceId),
+                            })
+                            if reqFunc then
+                                reqFunc({
+                                    Url     = BRAND.BackendURL.."/heartbeat",
+                                    Method  = "POST",
+                                    Headers = {["Content-Type"]="application/json",["x-secret"]=BRAND.APISecret or ""},
+                                    Body    = body,
+                                })
+                            end
+                        end)
+                    end
+                    -- Send leave when loop ends (GUI destroyed)
+                    pcall(function()
+                        local reqFunc = (syn and syn.request) or request or http_request or (http and http.request)
+                        if reqFunc then
+                            reqFunc({
+                                Url     = BRAND.BackendURL.."/leave",
+                                Method  = "POST",
+                                Headers = {["Content-Type"]="application/json",["x-secret"]=BRAND.APISecret or ""},
+                                Body    = HttpService:JSONEncode({session_token=sessionToken}),
+                            })
+                        end
+                    end)
+                end)
+            end
         else
             ABtn.Text          = "Authorize"
             KStatus.Text       = "✗ "..err
