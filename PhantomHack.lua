@@ -637,12 +637,13 @@ function BuildMain(tier, expiresAt)
         Name="TopBar",Size=UDim2.new(1,0,0,C.TH),
         BackgroundColor3=C.Side,BorderSizePixel=0,Parent=Main,
     })
-    -- Square bottom corners of topbar
+    -- No UICorner on TB - it sits inside ClipsDescendants Main
+    -- Bottom square cover
     inst("Frame",{
-        Position=UDim2.new(0,0,1,-12),Size=UDim2.new(1,0,0,12),
+        Position=UDim2.new(0,0,1,-1),Size=UDim2.new(1,0,0,1),
         BackgroundColor3=C.Side,BorderSizePixel=0,Parent=TB,
     })
-    -- Bottom border
+    -- Bottom border line
     inst("Frame",{
         Position=UDim2.new(0,0,1,0),AnchorPoint=Vector2.new(0,1),
         Size=UDim2.new(1,0,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=TB,
@@ -799,10 +800,10 @@ function BuildMain(tier, expiresAt)
 
     ST:Section("Menu Controls")
     ST:Keybind("Toggle Menu",Enum.KeyCode.RightShift,function()
-        if Main then Main.Visible=not Main.Visible end
+        if Outer then Outer.Visible=not Outer.Visible end
     end)
     ST:Keybind("Close Menu",Enum.KeyCode.Delete,function()
-        tw(Main,.25,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In)
+        tw(Outer,.25,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In)
         task.wait(.28);Gui:Destroy()
     end)
     ST:Separator()
@@ -836,7 +837,7 @@ function BuildMain(tier, expiresAt)
     ST:Label("discord.gg/phantomhack")
     ST:Separator()
     ST:Button("Unload",function()
-        tw(Main,.25,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In)
+        tw(Outer,.25,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In)
         task.wait(.28);Gui:Destroy()
     end)
 
@@ -882,10 +883,10 @@ function BuildMain(tier, expiresAt)
 
     settingsShortcut.MouseButton1Click:Connect(function()
         openSettings()
-        if Main and not Main.Visible then Main.Visible=true end
+        if Outer and not Outer.Visible then Outer.Visible=true end
         if minimized then
             minimized=false
-            tw(Main,.3,{Size=UDim2.new(0,C.W,0,C.H)},Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+            tw(Outer,.3,{Size=UDim2.new(0,C.W,0,C.H)},Enum.EasingStyle.Back,Enum.EasingDirection.Out)
             BMin.Text="–"
             task.delay(.28,function()
                 if SideBG2  then SideBG2.Visible=true  end
