@@ -1,29 +1,5 @@
 {
-  "keys": {
-    "PHANTOM-TRL-2IOWD1-068FEX": {
-      "tier": "Free",
-      "type": "TRIAL",
-      "durationLabel": "24 Hours",
-      "expiresAt": 1777929126,
-      "redeemed": false,
-      "redeemedBy": "oreotheant",
-      "redeemedById": "1381762261722599494",
-      "redeemedAt": "2026-05-03T21:14:20.075Z",
-      "robloxName": "ChrisHogan_Pats15",
-      "hwid": "7d64e5a4314805d52a13d39f71fd905c05ffa099af8fbeebcc0a3ca37cf2a7619fdce84b5b62bbc32883bc2fa8618417f38633af9b31e2279570165d7e6e4cda",
-      "hwidBoundAt": "2026-05-03T21:14:58.620Z",
-      "hwidResets": 0,
-      "executor": "Potassium",
-      "lastSeen": "2026-05-03T21:14:58.620Z",
-      "uses": 1,
-      "revoked": false,
-      "revokedReason": null,
-      "blacklisted": false,
-      "blacklistReason": null,
-      "generatedAt": "2026-05-03T21:12:06.933Z",
-      "generatedBy": "oreotheant"
-    }
-  },
+  "keys": {},
   "stats": {
     "totalGenerated": 1,
     "totalRedeemed": 1,
