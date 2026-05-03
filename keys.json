@@ -29,9 +29,9 @@
       "durationLabel": "Lifetime",
       "expiresAt": null,
       "redeemed": false,
-      "redeemedBy": null,
-      "redeemedById": null,
-      "redeemedAt": null,
+      "redeemedBy": "oreotheant",
+      "redeemedById": "1381762261722599494",
+      "redeemedAt": "2026-05-03T21:20:45.529Z",
       "robloxName": null,
       "hwid": null,
       "hwidBoundAt": null,
@@ -49,7 +49,7 @@
   },
   "stats": {
     "totalGenerated": 2,
-    "totalRedeemed": 1,
+    "totalRedeemed": 2,
     "totalRevoked": 1,
     "totalBlacklisted": 1,
     "totalHwidResets": 0
