@@ -639,4 +639,6 @@ Misc:Label("Version:  Phantom Hack v1.2.0")
 Misc:Label("Created by Oreo")
 
 -- ── Done ──────────────────────────────────────────────────────
+-- Select the first tab now that all tabs have been added
+PH:SelectFirst()
 PH:Notify("Core Loaded", "All features ready  •  " .. PH.Tier .. " tier", 4, "success")
