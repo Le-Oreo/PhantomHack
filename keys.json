@@ -1,7 +1,31 @@
 {
-  "keys": {},
+  "keys": {
+    "PHANTOM-TRL-2IOWD1-068FEX": {
+      "tier": "Free",
+      "type": "TRIAL",
+      "durationLabel": "24 Hours",
+      "expiresAt": 1777929126,
+      "redeemed": false,
+      "redeemedBy": null,
+      "redeemedById": null,
+      "redeemedAt": null,
+      "robloxName": null,
+      "hwid": null,
+      "hwidBoundAt": null,
+      "hwidResets": 0,
+      "executor": null,
+      "lastSeen": null,
+      "uses": 0,
+      "revoked": false,
+      "revokedReason": null,
+      "blacklisted": false,
+      "blacklistReason": null,
+      "generatedAt": "2026-05-03T21:12:06.933Z",
+      "generatedBy": "oreotheant"
+    }
+  },
   "stats": {
-    "totalGenerated": 0,
+    "totalGenerated": 1,
     "totalRedeemed": 0,
     "totalRevoked": 0,
     "totalBlacklisted": 0,
