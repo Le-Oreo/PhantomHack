@@ -416,12 +416,7 @@ local function MakeTab(name,icon,hideSidebar)
         td.Bar.Visible=true
     end
 
-    -- Only auto-select first VISIBLE (non-hidden) tab
-    if not hideSidebar then
-        local visibleCount = 0
-        for _,td in ipairs(AllTabs) do if td.Btn.Visible then visibleCount=visibleCount+1 end end
-        if visibleCount==1 then task.defer(SetActive) end
-    end
+    -- (auto-select is handled by PH:SelectFirst() called from Core.lua)
     btn.MouseButton1Click:Connect(SetActive)
     btn.MouseEnter:Connect(function() if ActiveTab~=td then tw(btn,.12,{BackgroundTransparency=0});tw(lbl,.12,{TextColor3=C.T1}) end end)
     btn.MouseLeave:Connect(function() if ActiveTab~=td then tw(btn,.12,{BackgroundTransparency=1});tw(lbl,.12,{TextColor3=C.T2}) end end)
@@ -894,12 +889,38 @@ function BuildMain(tier, expiresAt)
         end
     end)
 
+    -- SelectFirst: call this after all your tabs are added in Core.lua
+    -- It picks the first visible sidebar tab and activates it
+    local function SelectFirst()
+        for _,td in ipairs(AllTabs) do
+            if td.Btn.Visible and td.Btn.Parent then
+                if ActiveTab == td then return end  -- already selected
+                if ActiveTab then
+                    ActiveTab.Page.Visible=false
+                    ActiveTab.Btn.BackgroundTransparency=1
+                    tw(ActiveTab.Lbl,.15,{TextColor3=C.T2})
+                    tw(ActiveTab.Ico,.15,{TextColor3=C.TM})
+                    ActiveTab.Bar.Visible=false
+                end
+                ActiveTab=td
+                td.Page.Visible=true
+                td.Btn.BackgroundTransparency=0
+                td.Btn.BackgroundColor3=C.SurfH
+                td.Lbl.TextColor3=C.T1
+                td.Ico.TextColor3=C.Accent
+                td.Bar.Visible=true
+                return
+            end
+        end
+    end
+
     return {
-        Tab       = MakeTab,
-        Notify    = Notify,
-        Config    = C,
-        Tier      = ValidatedTier,
-        KeyExpiry = ValidatedExpiry,
+        Tab         = MakeTab,
+        Notify      = Notify,
+        Config      = C,
+        Tier        = ValidatedTier,
+        KeyExpiry   = ValidatedExpiry,
+        SelectFirst = SelectFirst,
     }
 end
 
