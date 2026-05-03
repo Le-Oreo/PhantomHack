@@ -17,9 +17,9 @@
 ╚══════════════════════════════════════════════════════════════╝
 
 LOGO / BRANDING:
-  Upload a square PNG to your GitHub repo, then set LogoURL below.
-  Example: https://raw.githubusercontent.com/Le-Oreo/PhantomHack/main/logo.png
-  If the URL is empty or fails to load, it falls back to the "P" text.
+  Upload your image to Roblox as a Decal, get the asset ID, set it as LogoID.
+  Example: roblox.com/catalog/12345678 → LogoID = "12345678"
+  Leave LogoID empty to use the letter fallback.
 
 ACCENT RECOLOR:
   Changing the accent in Settings instantly recolors every accent-colored
@@ -41,12 +41,11 @@ local BRAND = {
     Version    = "v1.2.0",
     ToggleKey  = Enum.KeyCode.RightShift,
     KeysURL    = "https://raw.githubusercontent.com/Le-Oreo/PhantomHack/main/keys.json",
-    -- Logo: upload a PNG to your GitHub repo and set these two values.
-    -- LogoURL  = raw GitHub URL to the image file
-    -- LogoFile = any local filename to cache it under (must end in .png/.jpg)
-    -- Leave LogoURL as "" to use the letter fallback.
-    LogoURL    = "",
-    LogoFile   = "ph_logo.png",
+    -- Logo: upload your image to Roblox (a Decal or Image asset),
+    -- then paste the asset ID number here.
+    -- Example: if your decal URL is roblox.com/library/12345678 then set LogoID = "12345678"
+    -- Leave as "" to use the letter fallback (shows first letter of hub name).
+    LogoID     = "95953991455279",
     -- Offline fallback keys (used if GitHub is unreachable)
     OfflineKeys = {},
 }
@@ -216,44 +215,9 @@ local function drag(frame,handle)
 end
 
 --==[ LOGO HELPER ]==--
---[[
-    HOW THE LOGO WORKS:
-    Roblox ImageLabel.Image does NOT accept raw HTTPS URLs directly.
-    To use a custom image from GitHub:
-      1. Set BRAND.LogoURL  = raw GitHub URL to your PNG
-      2. Set BRAND.LogoFile = a local filename (e.g. "logo.png")
-    The script downloads it, saves it with writefile(), then loads
-    it with getcustomasset() / getsynasset().
-    Requires your executor to support writefile + getcustomasset.
-    Falls back to the first letter of your hub name if unavailable.
---]]
-
-local LogoAssetPath = nil
-
-local function preloadLogo()
-    if not BRAND.LogoURL or BRAND.LogoURL == "" then return end
-    if not BRAND.LogoFile or BRAND.LogoFile == "" then
-        BRAND.LogoFile = "ph_logo.png"
-    end
-    task.spawn(function()
-        pcall(function()
-            local imageData = game:HttpGet(BRAND.LogoURL, true)
-            if not imageData or imageData == "" then return end
-            if writefile then
-                writefile(BRAND.LogoFile, imageData)
-            else
-                return
-            end
-            if getcustomasset then
-                LogoAssetPath = getcustomasset(BRAND.LogoFile)
-            elseif getsynasset then
-                LogoAssetPath = getsynasset(BRAND.LogoFile)
-            end
-        end)
-    end)
-end
-
-preloadLogo()
+-- Simple: just uses rbxassetid:// directly from BRAND.LogoID.
+-- No downloading, no writefile, works on every executor instantly.
+-- To use: upload your image to Roblox as a Decal, copy the asset ID number.
 
 local function makeLogo(parent, size, pos, anchor)
     local frame = inst("Frame", {
@@ -267,36 +231,27 @@ local function makeLogo(parent, size, pos, anchor)
     trackAccent(frame, "BackgroundColor3")
 
     local letter = string.upper(string.sub(BRAND.Name, 1, 1))
-    local textFallback = inst("TextLabel", {
-        Size               = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text               = letter,
-        TextColor3         = Color3.new(1, 1, 1),
-        Font               = C.FontB,
-        TextSize           = 18,
-        Parent             = frame,
-    })
 
-    if BRAND.LogoURL and BRAND.LogoURL ~= "" then
-        local img = inst("ImageLabel", {
-            Size               = UDim2.new(1, 0, 1, 0),
-            BackgroundTransparency = 1,
-            Image              = "",
-            ScaleType          = Enum.ScaleType.Fit,
-            Visible            = false,
-            Parent             = frame,
+    if BRAND.LogoID and BRAND.LogoID ~= "" then
+        -- Use Roblox asset ID directly — works instantly, no downloads needed
+        inst("ImageLabel", {
+            Size                  = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency= 1,
+            Image                 = "rbxassetid://" .. BRAND.LogoID,
+            ScaleType             = Enum.ScaleType.Fit,
+            Parent                = frame,
         })
-        task.spawn(function()
-            local waited = 0
-            while LogoAssetPath == nil and waited < 10 do
-                task.wait(0.2); waited = waited + 0.2
-            end
-            if LogoAssetPath then
-                img.Image            = LogoAssetPath
-                img.Visible          = true
-                textFallback.Visible = false
-            end
-        end)
+    else
+        -- Fallback: first letter of the hub name
+        inst("TextLabel", {
+            Size                  = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency= 1,
+            Text                  = letter,
+            TextColor3            = Color3.new(1, 1, 1),
+            Font                  = C.FontB,
+            TextSize              = 18,
+            Parent                = frame,
+        })
     end
 
     return frame
@@ -341,7 +296,7 @@ local KF=inst("Frame",{
 -- Logo
 makeLogo(KF, UDim2.new(0,32,0,32), UDim2.new(0,18,0,18), Vector2.new(0,0))
 inst("TextLabel",{Position=UDim2.new(0,58,0,15),Size=UDim2.new(1,-70,0,18),BackgroundTransparency=1,Text=BRAND.Name,TextColor3=C.T1,Font=C.FontB,TextSize=16,TextXAlignment=Enum.TextXAlignment.Left,Parent=KF})
-inst("TextLabel",{Position=UDim2.new(0,58,0,34),Size=UDim2.new(1,-70,0,13),BackgroundTransparency=1,Text="Authentication Required  •  "..BRAND.Version,TextColor3=C.T2,Font=C.FontR,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,Parent=KF})
+inst("TextLabel",{Position=UDim2.new(0,58,0,34),Size=UDim2.new(1,-70,0,13),BackgroundTransparency=1,Text="by Oreo  •  "..BRAND.Version,TextColor3=C.T2,Font=C.FontR,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,Parent=KF})
 inst("Frame",{Position=UDim2.new(0,0,0,60),Size=UDim2.new(1,0,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=KF})
 
 local KBox=inst("Frame",{Position=UDim2.new(0,18,0,72),Size=UDim2.new(1,-36,0,40),BackgroundColor3=C.Surf,BorderSizePixel=0,Parent=KF},{crn(8),bdr(C.Bdr)})
@@ -361,7 +316,7 @@ local function mkKBtn(lbl,x,w,primary)
 end
 local GKBtn=mkKBtn("Get Key",18,185,false)
 local ABtn =mkKBtn("Authorize",211,211,true)
-inst("TextLabel",{Position=UDim2.new(0,0,1,-20),Size=UDim2.new(1,0,0,13),BackgroundTransparency=1,Text="© 2026 Phantom Hack",TextColor3=C.TM,Font=C.FontR,TextSize=10,Parent=KF})
+inst("TextLabel",{Position=UDim2.new(0,0,1,-20),Size=UDim2.new(1,0,0,13),BackgroundTransparency=1,Text="© 2026 Phantom Hack  •  by Oreo",TextColor3=C.TM,Font=C.FontR,TextSize=10,Parent=KF})
 
 drag(KF)
 GKBtn.MouseButton1Click:Connect(function()
@@ -602,6 +557,18 @@ function BuildMain(tier, expiresAt)
         Position=UDim2.new(0,C.SW+14,0.5,0),AnchorPoint=Vector2.new(0,0.5),
         Size=UDim2.new(0,66,0,22),BackgroundColor3=C.Surf,BorderSizePixel=0,Parent=TB,
     },{crn(6),bdr(C.Bdr),inst("TextLabel",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text=BRAND.Version,TextColor3=C.T2,Font=C.FontR,TextSize=11})})
+    -- "by Oreo" credit label, sits right of version badge
+    inst("TextLabel",{
+        Position=UDim2.new(0,C.SW+88,0.5,0),AnchorPoint=Vector2.new(0,0.5),
+        Size=UDim2.new(0,60,0,22),
+        BackgroundTransparency=1,
+        Text="by Oreo",
+        TextColor3=C.TM,
+        Font=C.FontR,
+        TextSize=10,
+        TextXAlignment=Enum.TextXAlignment.Left,
+        Parent=TB,
+    })
 
     --==[ WINDOW CONTROLS ]==--
     local minimized=false
@@ -689,7 +656,7 @@ function BuildMain(tier, expiresAt)
     end
     profBtn.MouseButton1Click:Connect(toggleProf)
 
-    local pCard=inst("Frame",{AnchorPoint=Vector2.new(.5,.5),Position=UDim2.new(.5,0,.5,0),Size=UDim2.new(0,340,0,400),BackgroundColor3=C.Surf,BorderSizePixel=0,ZIndex=11,Parent=PO},{crn(12),bdr(C.Bdr)})
+    local pCard=inst("Frame",{AnchorPoint=Vector2.new(.5,.5),Position=UDim2.new(.5,0,.5,0),Size=UDim2.new(0,340,0,430),BackgroundColor3=C.Surf,BorderSizePixel=0,ZIndex=11,Parent=PO},{crn(12),bdr(C.Bdr)})
     inst("TextLabel",{Position=UDim2.new(0,0,0,14),Size=UDim2.new(1,0,0,18),BackgroundTransparency=1,Text="PLAYER PROFILE",TextColor3=C.Accent,Font=C.FontB,TextSize=11,ZIndex=12,Parent=pCard})
     trackAccent(pCard:FindFirstChild("TextLabel") or pCard,"TextColor3")
 
@@ -707,6 +674,7 @@ function BuildMain(tier, expiresAt)
         {"Game ID",    tostring(game.PlaceId)},
         {"Tier",       ValidatedTier},
         {"Expires",    ValidatedExpiry and fmtExpiry(ValidatedExpiry).." left" or "Lifetime"},
+        {"Created By",  "Oreo"},
     }
     for idx,row in ipairs(infoRows) do
         local y=172+(idx-1)*30
@@ -759,6 +727,12 @@ function BuildMain(tier, expiresAt)
         pcall(function() if setclipboard then setclipboard("https://discord.gg/phantomhack") end end)
         Notify("Discord","Invite copied.",2,"success")
     end)
+    ST:Separator()
+    ST:Section("Credits")
+    ST:Label("Phantom Hack — created by Oreo")
+    ST:Label("GUI Template  •  "..BRAND.Version)
+    ST:Label("discord.gg/phantomhack")
+    ST:Separator()
     ST:Button("Unload",function()
         tw(Main,.25,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In)
         task.wait(.28);Gui:Destroy()
