@@ -612,23 +612,44 @@ function BuildMain(tier, expiresAt)
     ValidatedTier   = tier   or "Free"
     ValidatedExpiry = expiresAt
 
-    -- Full rounded window — ClipsDescendants handles inner corner clipping
+    -- Main window — NO ClipsDescendants so UICorner shows properly
+    -- Corner roundness is achieved with a UICorner on the frame itself
+    -- The border is a separate UIStroke
     Main=inst("Frame",{
         Name="Main",AnchorPoint=Vector2.new(.5,.5),
         Position=UDim2.new(.5,0,.5,0),Size=UDim2.new(0,0,0,0),
         BackgroundColor3=C.BG,BorderSizePixel=0,
-        ClipsDescendants=true,Parent=Gui,
+        ClipsDescendants=false,  -- MUST be false for corners to show
+        Parent=Gui,
     },{crn(12),bdr(C.Bdr)})
     tw(Main,.45,{Size=UDim2.new(0,C.W,0,C.H)},Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+
+    -- Corner mask overlay — sits on top (ZIndex high), covers the inner
+    -- edges where child frames bleed past the rounded corners.
+    -- It's a transparent frame with UICorner that visually hides overflow.
+    local cornerMask=inst("Frame",{
+        Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,
+        BorderSizePixel=0,ZIndex=100,Parent=Main,
+    },{crn(12)})
+    -- We also add a UIStroke on the mask to reinforce the border
+    inst("UIStroke",{Color=C.Bdr,Thickness=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border,Parent=cornerMask})
 
     --==[ TOPBAR ]==--
     local TB=inst("Frame",{
         Name="TopBar",Size=UDim2.new(1,0,0,C.TH),
         BackgroundColor3=C.Side,BorderSizePixel=0,Parent=Main,
+    },{crn(12)})
+    -- Square ONLY the bottom corners of the topbar
+    -- by placing a covering frame over the bottom-left and bottom-right corners
+    inst("Frame",{
+        Position=UDim2.new(0,0,1,-12),Size=UDim2.new(1,0,0,12),
+        BackgroundColor3=C.Side,BorderSizePixel=0,Parent=TB,ZIndex=2,
     })
-    -- Square bottom so it blends into body (top corners are clipped by Main's crn)
-    inst("Frame",{Position=UDim2.new(0,0,1,-10),Size=UDim2.new(1,0,0,10),BackgroundColor3=C.Side,BorderSizePixel=0,Parent=TB})
-    inst("Frame",{Position=UDim2.new(0,0,1,0),AnchorPoint=Vector2.new(0,1),Size=UDim2.new(1,0,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=TB})
+    -- Bottom border line
+    inst("Frame",{
+        Position=UDim2.new(0,0,1,0),AnchorPoint=Vector2.new(0,1),
+        Size=UDim2.new(1,0,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=TB,ZIndex=2,
+    })
 
     -- Logo box
     makeLogo(TB, UDim2.new(0,34,0,34), UDim2.new(0,12,.5,0), Vector2.new(0,.5))
@@ -673,23 +694,20 @@ function BuildMain(tier, expiresAt)
     BMin.MouseButton1Click:Connect(function()
         minimized=not minimized
         if minimized then
-            -- Hide everything except topbar BEFORE shrinking
-            if SideBG2    then SideBG2.Visible=false    end
+            if SideBG2     then SideBG2.Visible=false    end
             if SideScroll2 then SideScroll2.Visible=false end
             if CA2         then CA2.Visible=false         end
             if UC2         then UC2.Visible=false         end
-            -- Compact: just logo + name + version badge + two buttons
-            -- Width: logo(14+30+6=50) + name(200) + divider + version(80) + gap + controls(80) + margin = ~450
-            tw(Main,.25,{Size=UDim2.new(0,450,0,C.TH)})
+            tw(Main,.25,{Size=UDim2.new(0,420,0,C.TH)})
             BMin.Text="□"
         else
             tw(Main,.3,{Size=UDim2.new(0,C.W,0,C.H)},Enum.EasingStyle.Back,Enum.EasingDirection.Out)
             BMin.Text="–"
             task.delay(.28,function()
-                if SideBG2     then SideBG2.Visible=true     end
-                if SideScroll2 then SideScroll2.Visible=true  end
-                if CA2          then CA2.Visible=true          end
-                if UC2          then UC2.Visible=true          end
+                if SideBG2     then SideBG2.Visible=true    end
+                if SideScroll2 then SideScroll2.Visible=true end
+                if CA2         then CA2.Visible=true         end
+                if UC2         then UC2.Visible=true         end
             end)
         end
     end)
