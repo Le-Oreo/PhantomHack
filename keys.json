@@ -1,1 +1,10 @@
-
+{
+  "keys": {},
+  "stats": {
+    "totalGenerated": 0,
+    "totalRedeemed": 0,
+    "totalRevoked": 0,
+    "totalBlacklisted": 0,
+    "totalHwidResets": 0
+  }
+}
