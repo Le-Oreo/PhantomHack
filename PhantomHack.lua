@@ -44,9 +44,9 @@ local BRAND = {
     -- Backend server URL — your deployed server.js
     -- e.g. "https://phantom-backend.railway.app"
     -- This handles auth, HWID locking and key-sharing detection
-    BackendURL = "",
+    BackendURL = "http://localhost:3000",
     -- Must match API_SECRET in your server.js .env file
-    APISecret  = "change_me_lua_secret",
+    APISecret  = "PhantomAPI",
 
     -- Fallback keys.json URL — if backend is unreachable the script
     -- falls back to reading keys.json from GitHub directly (no sharing protection)
