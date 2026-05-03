@@ -45,7 +45,7 @@ local BRAND = {
     -- then paste the asset ID number here.
     -- Example: if your decal URL is roblox.com/library/12345678 then set LogoID = "12345678"
     -- Leave as "" to use the letter fallback (shows first letter of hub name).
-    LogoID     = "76539186831987",
+    LogoID     = "100749644447610",
     -- Offline / fallback keys — these ALWAYS work, even without internet
     -- Delete or change these when you go live
     OfflineKeys = {
@@ -227,12 +227,14 @@ end
 -- To use: upload your image to Roblox as a Decal, copy the asset ID number.
 
 local function makeLogo(parent, size, pos, anchor)
+    -- ClipsDescendants=true makes the ImageLabel clip to the rounded frame
     local frame = inst("Frame", {
         Position         = pos    or UDim2.new(0, 0, 0, 0),
         AnchorPoint      = anchor or Vector2.new(0, 0),
         Size             = size   or UDim2.new(0, 32, 0, 32),
         BackgroundColor3 = C.Accent,
         BorderSizePixel  = 0,
+        ClipsDescendants = true,   -- clips image to rounded corners
         Parent           = parent,
     }, {crn(8)})
     trackAccent(frame, "BackgroundColor3")
@@ -240,33 +242,25 @@ local function makeLogo(parent, size, pos, anchor)
     local letter = string.upper(string.sub(BRAND.Name, 1, 1))
 
     if BRAND.LogoID and BRAND.LogoID ~= "" then
-        -- For Decal assets uploaded via create.roblox.com, we need to fetch
-        -- the actual image asset ID from inside the decal using AssetService.
-        -- This runs async so the letter shows first then swaps to the image.
         local img = inst("ImageLabel", {
             Size                  = UDim2.new(1, 0, 1, 0),
             BackgroundTransparency= 1,
-            Image                 = "",
+            Image                 = "rbxassetid://" .. BRAND.LogoID,
             ScaleType             = Enum.ScaleType.Fit,
-            Visible               = false,
             Parent                = frame,
         })
-        task.spawn(function()
-            -- Method 1: try direct rbxassetid (works if uploaded as Image not Decal)
-            img.Image   = "rbxassetid://" .. BRAND.LogoID
-            img.Visible = true
-            task.wait(2)
-            -- If image still blank (ContentId empty), try fetching via InsertService
-            if img.ImageContent == "" or not img.IsLoaded then
-                pcall(function()
-                    local AS = game:GetService("AssetService")
-                    -- For a Decal, the image is at the asset URL directly
-                    img.Image = "https://assetdelivery.roblox.com/v1/asset/?id=" .. BRAND.LogoID
-                end)
-            end
-        end)
+        -- Letter sits behind as fallback while image loads
+        inst("TextLabel", {
+            Size                  = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency= 1,
+            Text                  = letter,
+            TextColor3            = Color3.new(1, 1, 1),
+            Font                  = C.FontB,
+            TextSize              = 18,
+            ZIndex                = 0,
+            Parent                = frame,
+        })
     else
-        -- Fallback: first letter of the hub name
         inst("TextLabel", {
             Size                  = UDim2.new(1, 0, 1, 0),
             BackgroundTransparency= 1,
@@ -446,10 +440,67 @@ local function MakeTab(name,icon)
         local state=default or false
         local row=Row(42)
         inst("TextLabel",{Position=UDim2.new(0,14,0,0),Size=UDim2.new(1,-78,1,0),BackgroundTransparency=1,Text=text,TextColor3=C.T1,Font=C.Font,TextSize=12,TextXAlignment=Enum.TextXAlignment.Left,Parent=row})
-        inst("TextButton",{AnchorPoint=Vector2.new(1,.5),Position=UDim2.new(1,-52,.5,0),Size=UDim2.new(0,26,0,26),BackgroundColor3=C.SurfH,BorderSizePixel=0,Text="···",TextColor3=C.TM,Font=C.FontB,TextSize=11,AutoButtonColor=false,Parent=row},{crn(5)})
+
+        -- ··· button opens inline keybind picker for this toggle
+        local bindKey = Enum.KeyCode.Unknown
+        local bindBinding = false
+        local kbBtn = inst("TextButton",{
+            AnchorPoint=Vector2.new(1,.5),Position=UDim2.new(1,-52,.5,0),
+            Size=UDim2.new(0,26,0,26),BackgroundColor3=C.SurfH,BorderSizePixel=0,
+            Text="···",TextColor3=C.TM,Font=C.FontB,TextSize=11,AutoButtonColor=false,Parent=row,
+        },{crn(5)})
+
+        -- Keybind popup row (hidden by default, slides out below)
+        local kbRow = inst("Frame",{
+            Position=UDim2.new(0,0,1,2),Size=UDim2.new(1,0,0,30),
+            BackgroundColor3=C.SurfH,BorderSizePixel=0,Visible=false,Parent=row,
+        },{crn(6),bdr(C.Bdr)})
+        inst("TextLabel",{Position=UDim2.new(0,10,0,0),Size=UDim2.new(.45,0,1,0),BackgroundTransparency=1,Text="Keybind:",TextColor3=C.T2,Font=C.FontR,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,Parent=kbRow})
+        local kbLabel = inst("TextButton",{
+            AnchorPoint=Vector2.new(1,.5),Position=UDim2.new(1,-8,.5,0),
+            Size=UDim2.new(0,90,0,22),BackgroundColor3=C.Surf,BorderSizePixel=0,
+            Text="None",TextColor3=C.Accent,Font=C.Font,TextSize=11,AutoButtonColor=false,Parent=kbRow,
+        },{crn(5),bdr(C.Bdr)})
+        trackAccent(kbLabel,"TextColor3")
+
+        local kbOpen = false
+        kbBtn.MouseButton1Click:Connect(function()
+            kbOpen = not kbOpen
+            kbRow.Visible = kbOpen
+            -- Expand/contract the row to show keybind area
+            tw(row,.2,{Size=UDim2.new(1,0,0,kbOpen and 76 or 42)})
+        end)
+
+        kbLabel.MouseButton1Click:Connect(function()
+            if bindBinding then return end
+            bindBinding = true
+            kbLabel.Text = "..."
+            kbLabel.TextColor3 = C.Warn
+            local conn; conn = UserInputService.InputBegan:Connect(function(i)
+                if i.UserInputType == Enum.UserInputType.Keyboard then
+                    bindKey = i.KeyCode
+                    kbLabel.Text = i.KeyCode.Name
+                    kbLabel.TextColor3 = C.Accent
+                    bindBinding = false
+                    conn:Disconnect()
+                    -- Register in global keybinds
+                    Keybinds[text.."_toggle"] = {
+                        key = bindKey,
+                        cb  = function()
+                            state = not state
+                            if state then sw.BackgroundColor3=C.Accent;tw(kn,.18,{Position=UDim2.new(1,-17,.5,0),BackgroundColor3=Color3.new(1,1,1)})
+                            else sw.BackgroundColor3=C.Bdr;tw(kn,.18,{Position=UDim2.new(0,2,.5,0),BackgroundColor3=C.TM}) end
+                            Notify(text,state and "Enabled" or "Disabled",2,state and "success" or "error")
+                            if callback then pcall(callback,state) end
+                        end
+                    }
+                    Notify("Keybind",text.." → "..i.KeyCode.Name,2,"success")
+                end
+            end)
+        end)
+
         local sw=inst("Frame",{AnchorPoint=Vector2.new(1,.5),Position=UDim2.new(1,-12,.5,0),Size=UDim2.new(0,36,0,19),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=row},{crn(10)})
         local kn=inst("Frame",{Position=UDim2.new(0,2,.5,0),AnchorPoint=Vector2.new(0,.5),Size=UDim2.new(0,15,0,15),BackgroundColor3=C.TM,BorderSizePixel=0,Parent=sw},{crn(8)})
-        -- Track sw so accent change updates active toggles
         trackAccent(sw,"BackgroundColor3")
         local function ref()
             if state then
@@ -460,8 +511,6 @@ local function MakeTab(name,icon)
                 tw(kn,.18,{Position=UDim2.new(0,2,.5,0),BackgroundColor3=C.TM})
             end
         end
-        -- Override trackAccent for this sw — it should only be accent when ON
-        -- Remove it from global list and handle manually
         table.remove(AccentObjects,#AccentObjects)
         ref()
         inst("TextButton",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text="",Parent=row}).MouseButton1Click:Connect(function()
@@ -724,41 +773,40 @@ function BuildMain(tier, expiresAt)
     cpBtn.MouseLeave:Connect(function() tw(cpBtn,.12,{BackgroundColor3=C.Surf}) end)
 
     --=======================================================--
-    --            BUILT-IN TABS (menu controls only)         --
+    --   BUILT-IN TABS — Settings only (no Keybinds tab)    --
     --=======================================================--
 
-    -- KEYBINDS
-    local KB=MakeTab("Keybinds","⌨")
-    KB:Section("Menu Controls")
-    KB:Keybind("Toggle Menu",Enum.KeyCode.RightShift,function() if Main then Main.Visible=not Main.Visible end end)
-    KB:Keybind("Close Menu",Enum.KeyCode.Delete,function()
-        tw(Main,.25,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In);task.wait(.28);Gui:Destroy()
-    end)
-    KB:Section("Custom Slots")
-    KB:Keybind("Custom Slot 1",Enum.KeyCode.Unknown,function() Notify("Custom","Slot 1.",2) end)
-    KB:Keybind("Custom Slot 2",Enum.KeyCode.Unknown,function() Notify("Custom","Slot 2.",2) end)
-    KB:Separator()
-    KB:Label("Click a bind then press any key to change it.")
-
-    -- SETTINGS
+    -- SETTINGS (accessible via sidebar AND the ⚙ button in topbar)
     local ST=MakeTab("Settings","◎")
+
+    ST:Section("Menu Controls")
+    ST:Keybind("Toggle Menu",Enum.KeyCode.RightShift,function()
+        if Main then Main.Visible=not Main.Visible end
+    end)
+    ST:Keybind("Close Menu",Enum.KeyCode.Delete,function()
+        tw(Main,.25,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In)
+        task.wait(.28);Gui:Destroy()
+    end)
+    ST:Separator()
+
     ST:Section("Accent Color")
     ST:Dropdown("Theme",{"Red","Blue","Purple","Green","Orange","Pink","Cyan","White"},"Red",function(choice)
         local p=AccentPresets[choice]
         if p then
             applyAccent(p[1],p[2],p[3])
-            -- Also update Bad (danger) to stay red regardless of theme
             C.Bad=Color3.fromRGB(215,35,35)
         end
         Notify("Theme","Color changed to "..choice,2,"success")
     end)
     ST:Separator()
+
     ST:Section("Window")
     ST:Toggle("Transparent Window",false,function(s)
         if Main then tw(Main,.2,{BackgroundTransparency=s and 0.12 or 0}) end
         Notify("Transparency",s and "On" or "Off",2)
     end)
     ST:Separator()
+
     ST:Button("Copy Discord",function()
         pcall(function() if setclipboard then setclipboard("https://discord.gg/phantomhack") end end)
         Notify("Discord","Invite copied.",2,"success")
@@ -772,6 +820,58 @@ function BuildMain(tier, expiresAt)
     ST:Button("Unload",function()
         tw(Main,.25,{Size=UDim2.new(0,0,0,0)},Enum.EasingStyle.Back,Enum.EasingDirection.In)
         task.wait(.28);Gui:Destroy()
+    end)
+
+    -- ⚙ Settings shortcut button in topbar (next to minimize)
+    -- Defined here so ST page reference is available
+    local settingsShortcut = inst("TextButton",{
+        AnchorPoint=Vector2.new(1,.5),
+        Position=UDim2.new(1,-78,.5,0),  -- sits left of the minimize button
+        Size=UDim2.new(0,28,0,28),
+        BackgroundColor3=C.Surf,BorderSizePixel=0,
+        Text="⚙",TextColor3=C.T2,Font=C.FontB,TextSize=14,
+        AutoButtonColor=false,Parent=TB,
+    },{crn(7)})
+    settingsShortcut.MouseEnter:Connect(function()
+        tw(settingsShortcut,.12,{BackgroundColor3=C.Accent,TextColor3=Color3.new(1,1,1)})
+    end)
+    settingsShortcut.MouseLeave:Connect(function()
+        tw(settingsShortcut,.12,{BackgroundColor3=C.Surf,TextColor3=C.T2})
+    end)
+    -- Wire up settings shortcut to directly activate the Settings tab page
+    local function openSettings()
+        local stData = AllTabs[#AllTabs]
+        if not stData then return end
+        if ActiveTab == stData then return end
+        if ActiveTab then
+            ActiveTab.Page.Visible=false
+            tw(ActiveTab.Btn,.15,{BackgroundTransparency=1,BackgroundColor3=C.SurfH})
+            tw(ActiveTab.Lbl,.15,{TextColor3=C.T2})
+            tw(ActiveTab.Ico,.15,{TextColor3=C.TM})
+            ActiveTab.Bar.Visible=false
+        end
+        ActiveTab=stData
+        stData.Page.Visible=true
+        tw(stData.Btn,.15,{BackgroundTransparency=0,BackgroundColor3=C.SurfH})
+        tw(stData.Lbl,.15,{TextColor3=C.T1})
+        tw(stData.Ico,.15,{TextColor3=C.Accent})
+        stData.Bar.Visible=true
+    end
+
+    settingsShortcut.MouseButton1Click:Connect(function()
+        openSettings()
+        if Main and not Main.Visible then Main.Visible=true end
+        if minimized then
+            minimized=false
+            tw(Main,.3,{Size=UDim2.new(0,C.W,0,C.H)},Enum.EasingStyle.Back,Enum.EasingDirection.Out)
+            BMin.Text="–"
+            task.delay(.28,function()
+                if SideBG2  then SideBG2.Visible=true  end
+                if SideScroll2 then SideScroll2.Visible=true end
+                if CA2      then CA2.Visible=true       end
+                if UC2      then UC2.Visible=true       end
+            end)
+        end
     end)
 
     --==[ GLOBAL KEYBIND HANDLER ]==--
