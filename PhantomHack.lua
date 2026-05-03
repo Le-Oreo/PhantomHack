@@ -41,18 +41,16 @@ local BRAND = {
     Version   = "v1.2.0",
     ToggleKey = Enum.KeyCode.RightShift,
 
-    -- keys.json URL — raw GitHub link to your keys file
-    -- The bot writes to this file, the script reads from it
-    KeysURL   = "https://raw.githubusercontent.com/Le-Oreo/PhantomHack/main/keys.json",
+    -- Backend server URL — your deployed server.js
+    -- e.g. "https://phantom-backend.railway.app"
+    -- This handles auth, HWID locking and key-sharing detection
+    BackendURL = "",
+    -- Must match API_SECRET in your server.js .env file
+    APISecret  = "change_me_lua_secret",
 
-    -- Update URL — the bot's GitHub API endpoint to write back
-    -- executor/HWID/lastSeen info after successful auth
-    -- Format: https://api.github.com/repos/OWNER/REPO/contents/keys.json
-    -- Leave as "" to skip writing back (auth still works, just no usage tracking)
-    UpdateURL = "",
-    -- GitHub token for writing back (needs repo scope)
-    -- Only needed if UpdateURL is set
-    GHToken   = "",
+    -- Fallback keys.json URL — if backend is unreachable the script
+    -- falls back to reading keys.json from GitHub directly (no sharing protection)
+    KeysURL   = "https://raw.githubusercontent.com/Le-Oreo/PhantomHack/main/keys.json",
 
     -- Logo asset ID from Roblox
     LogoID    = "110187797072022",
@@ -372,158 +370,84 @@ end
 --=======================================================--
 --              KEY VALIDATION                           --
 --=======================================================--
---[[
-    validateKey — reads keys.json from GitHub, validates the entered key.
-    Returns: ok, tier, expiresAt, errorMessage
-    
-    After successful validation it also writes back executor/HWID/lastSeen
-    to keys.json via GitHub API (if GHToken is set). This is what keeps
-    usage tracking working without a separate server.
-]]
 local function validateKey(entered)
-    -- ── Offline keys first (instant, no network) ─────────────────
+    -- ── Offline keys first (instant, no network needed) ──────────
     local offlineTiers = {
-        ["PHANTOM-FREE-TEST"] = "Free",
-        ["PHANTOM-PREM-TEST"] = "Premium",
-        ["PHANTOM-2026"]      = "Premium",
-        ["PHANTOM-FREE"]      = "Free",
+        ["PHANTOM-FREE-TEST"] = "Free",  ["PHANTOM-PREM-TEST"] = "Premium",
+        ["PHANTOM-2026"]      = "Premium",["PHANTOM-FREE"]      = "Free",
         ["PHANTOM-VIP"]       = "Premium",
     }
     for _,k in ipairs(BRAND.OfflineKeys) do
-        if entered == k then
-            return true, (offlineTiers[k] or "Free"), nil, nil
-        end
+        if entered == k then return true,(offlineTiers[k] or "Free"),nil,nil end
     end
 
-    -- ── Fetch keys.json from GitHub ───────────────────────────────
-    local ok, raw = pcall(function()
+    -- ── Try backend first (has HWID + sharing detection) ─────────
+    if BRAND.BackendURL and BRAND.BackendURL ~= "" then
+        local ok, result = pcall(function()
+            local reqFunc = (syn and syn.request) or request or http_request or (http and http.request)
+            if not reqFunc then error("no request function") end
+            local res = reqFunc({
+                Url    = BRAND.BackendURL .. "/auth",
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json",
+                    ["x-secret"]     = BRAND.APISecret or "",
+                },
+                Body = HttpService:JSONEncode({
+                    key         = entered,
+                    hwid        = HWID,
+                    roblox_id   = tostring(LP.UserId),
+                    roblox_name = LP.Name,
+                    executor    = ExecName,
+                    place_id    = tostring(game.PlaceId),
+                }),
+            })
+            return HttpService:JSONDecode(res.Body)
+        end)
+
+        if ok and result then
+            if not result.ok then
+                return false, nil, nil, (result.error or "Authentication failed.")
+            end
+            -- Store session token for heartbeat
+            _G._PH_SessionToken = result.session_token
+            return true, (result.tier or "Free"), result.expires_at, nil
+        end
+        -- Backend unreachable — fall through to keys.json fallback
+        warn("[PhantomHack] Backend unreachable, falling back to keys.json")
+    end
+
+    -- ── Fallback: read keys.json directly from GitHub ─────────────
+    -- NOTE: No concurrent session detection in fallback mode.
+    -- HWID checking still works client-side.
+    local ok2, raw = pcall(function()
         return game:HttpGet(BRAND.KeysURL, true)
     end)
-    if not ok or not raw or raw == "" then
+    if not ok2 or not raw or raw == "" then
         return false, nil, nil, "Could not reach key server. Check your connection."
     end
 
-    local pok, data = pcall(function()
-        return HttpService:JSONDecode(raw)
-    end)
+    local pok, data = pcall(function() return HttpService:JSONDecode(raw) end)
     if not pok or not data or not data.keys then
         return false, nil, nil, "Key server returned invalid data."
     end
 
-    -- ── Look up key ───────────────────────────────────────────────
     local kd = data.keys[entered]
-    if not kd then
-        return false, nil, nil, "Invalid key."
+    if not kd                  then return false, nil, nil, "Invalid key." end
+    if kd.blacklisted          then return false, nil, nil, "This key has been blacklisted. Appeal in Discord." end
+    if kd.revoked              then return false, nil, nil, "This key has been revoked." end
+    if not kd.redeemed         then return false, nil, nil, "Key not redeemed yet. Use /redeem in Discord." end
+    if kd.expiresAt and os.time() > kd.expiresAt then
+        local d = math.floor((os.time()-kd.expiresAt)/86400)
+        return false, nil, nil, "Key expired "..(d>0 and d.."d ago." or "recently.")
     end
-    if kd.blacklisted then
-        return false, nil, nil, "This key has been blacklisted for key sharing. Appeal in Discord."
-    end
-    if kd.revoked then
-        local reason = kd.revokedReason and (" Reason: "..kd.revokedReason) or ""
-        return false, nil, nil, "This key has been revoked."..reason
-    end
-    if not kd.redeemed then
-        return false, nil, nil, "Key not redeemed yet. Use /redeem in Discord."
-    end
-
-    -- ── Expiry check ──────────────────────────────────────────────
-    local expiresAt = kd.expiresAt
-    if expiresAt and os.time() > expiresAt then
-        local d = math.floor((os.time() - expiresAt) / 86400)
-        return false, nil, nil, "Key expired " .. (d > 0 and d.."d ago." or "recently.")
-    end
-
-    -- ── HWID check ────────────────────────────────────────────────
     if kd.hwid and kd.hwid ~= "" and HWID and kd.hwid ~= HWID then
         return false, nil, nil, "Key is locked to a different device. Use /resethwid in Discord."
     end
 
-    -- ── Auth passed — write back usage data async ─────────────────
-    -- Updates: hwid (on first bind), executor, lastSeen, uses
-    -- Written back to GitHub so the bot can see usage stats
-    task.spawn(function()
-        pcall(function()
-            -- We need to re-fetch to get the current SHA before writing
-            local reqFunc = (syn and syn.request) or request or http_request or (http and http.request)
-            if not reqFunc or not BRAND.GHToken or BRAND.GHToken == "" then return end
-
-            -- Fetch current file + SHA via GitHub API
-            local apiURL = BRAND.UpdateURL ~= "" and BRAND.UpdateURL
-                or "https://api.github.com/repos/Le-Oreo/PhantomHack/contents/keys.json"
-
-            local apiRes = reqFunc({
-                Url     = apiURL,
-                Method  = "GET",
-                Headers = {
-                    ["Authorization"] = "token " .. BRAND.GHToken,
-                    ["Accept"]        = "application/vnd.github.v3+json",
-                },
-            })
-            local apiData = HttpService:JSONDecode(apiRes.Body)
-            local sha     = apiData.sha
-            local current = HttpService:JSONDecode(
-                game:GetService("HttpBase64Service") and
-                game:GetService("HttpBase64Service"):DecodeAsync(apiData.content:gsub("
-","")) or
-                apiData.content  -- fallback if no base64 service
-            )
-            if not current or not current.keys or not current.keys[entered] then return end
-
-            local ckd = current.keys[entered]
-            -- Bind HWID on first use
-            if not ckd.hwid or ckd.hwid == "" then
-                ckd.hwid       = HWID
-                ckd.hwidBoundAt = os.date("!%Y-%m-%dT%H:%M:%SZ")
-            end
-            -- Always update these
-            ckd.executor  = ExecName
-            ckd.lastSeen  = os.date("!%Y-%m-%dT%H:%M:%SZ")
-            ckd.uses      = (ckd.uses or 0) + 1
-            ckd.robloxName = LP.Name
-
-            -- Write back to GitHub
-            local newContent = HttpService:JSONEncode(current)
-            -- Base64 encode
-            local b64 = ""
-            local ok2, encoded = pcall(function()
-                -- Try executor base64
-                if base64 and base64.encode then return base64.encode(newContent) end
-                if crypt and crypt.base64encode then return crypt.base64encode(newContent) end
-                -- Manual base64 (simple fallback)
-                local chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-                local result = {}
-                local bytes  = {newContent:byte(1,-1)}
-                for i=1,#bytes,3 do
-                    local b1,b2,b3 = bytes[i], bytes[i+1] or 0, bytes[i+2] or 0
-                    local n = b1*65536 + b2*256 + b3
-                    table.insert(result, chars:sub(math.floor(n/262144)%64+1,math.floor(n/262144)%64+1))
-                    table.insert(result, chars:sub(math.floor(n/4096)%64+1,  math.floor(n/4096)%64+1))
-                    table.insert(result, bytes[i+1] and chars:sub(math.floor(n/64)%64+1,math.floor(n/64)%64+1) or "=")
-                    table.insert(result, bytes[i+2] and chars:sub(n%64+1,n%64+1) or "=")
-                end
-                return table.concat(result)
-            end)
-            if not ok2 then return end
-
-            reqFunc({
-                Url    = apiURL,
-                Method = "PUT",
-                Headers = {
-                    ["Authorization"] = "token " .. BRAND.GHToken,
-                    ["Accept"]        = "application/vnd.github.v3+json",
-                    ["Content-Type"]  = "application/json",
-                },
-                Body = HttpService:JSONEncode({
-                    message = "Update usage: " .. entered:sub(1,16),
-                    content = encoded,
-                    sha     = sha,
-                }),
-            })
-        end)
-    end)
-
-    return true, (kd.tier or "Free"), expiresAt, nil
+    return true, (kd.tier or "Free"), kd.expiresAt, nil
 end
+
 
 --=======================================================--
 --                    KEY SCREEN                         --
@@ -1238,6 +1162,40 @@ local function doAuth()
             Notify("Welcome","Phantom Hack ["..tier.."] loading...",3,"success")
             -- Save key for auto-login next time
             saveKey(entered)
+
+            -- Start heartbeat to keep session alive on the backend
+            if BRAND.BackendURL and BRAND.BackendURL ~= "" and _G._PH_SessionToken then
+                local token = _G._PH_SessionToken
+                task.spawn(function()
+                    while Gui and Gui.Parent do
+                        task.wait(60)
+                        pcall(function()
+                            local reqFunc = (syn and syn.request) or request or http_request or (http and http.request)
+                            if reqFunc then
+                                reqFunc({
+                                    Url    = BRAND.BackendURL.."/heartbeat",
+                                    Method = "POST",
+                                    Headers = {["Content-Type"]="application/json",["x-secret"]=BRAND.APISecret or ""},
+                                    Body   = HttpService:JSONEncode({session_token=token}),
+                                })
+                            end
+                        end)
+                    end
+                    -- Send leave when GUI is destroyed
+                    pcall(function()
+                        local reqFunc = (syn and syn.request) or request or http_request or (http and http.request)
+                        if reqFunc then
+                            reqFunc({
+                                Url    = BRAND.BackendURL.."/leave",
+                                Method = "POST",
+                                Headers = {["Content-Type"]="application/json",["x-secret"]=BRAND.APISecret or ""},
+                                Body   = HttpService:JSONEncode({session_token=token}),
+                            })
+                        end
+                    end)
+                end)
+            end
+
             task.wait(.5)
             tw(KF,.3,{Size=UDim2.new(0,440,0,0),BackgroundTransparency=1})
             task.wait(.35)
