@@ -915,12 +915,13 @@ function BuildMain(tier, expiresAt)
     end
 
     return {
-        Tab         = MakeTab,
-        Notify      = Notify,
+        -- Wrappers that accept colon-call syntax (self is ignored)
+        Tab         = function(self, name, icon) return MakeTab(name, icon, false) end,
+        Notify      = function(self, ...) return Notify(...) end,
+        SelectFirst = function(self) return SelectFirst() end,
         Config      = C,
         Tier        = ValidatedTier,
         KeyExpiry   = ValidatedExpiry,
-        SelectFirst = SelectFirst,
     }
 end
 
