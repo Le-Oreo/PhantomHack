@@ -45,7 +45,7 @@ local BRAND = {
     -- then paste the asset ID number here.
     -- Example: if your decal URL is roblox.com/library/12345678 then set LogoID = "12345678"
     -- Leave as "" to use the letter fallback (shows first letter of hub name).
-    LogoID     = "100749644447610",
+    LogoID     = "110187797072022",
     -- Offline / fallback keys — these ALWAYS work, even without internet
     -- Delete or change these when you go live
     OfflineKeys = {
@@ -323,11 +323,11 @@ local KF=inst("Frame",{
     BackgroundColor3=C.BG,BorderSizePixel=0,Parent=Gui,
 },{crn(12),bdr(C.Bdr)})
 
--- Logo
-makeLogo(KF, UDim2.new(0,46,0,46), UDim2.new(0,16,0,16), Vector2.new(0,0))
-inst("TextLabel",{Position=UDim2.new(0,70,0,14),Size=UDim2.new(1,-82,0,18),BackgroundTransparency=1,Text=BRAND.Name,TextColor3=C.T1,Font=C.FontB,TextSize=16,TextXAlignment=Enum.TextXAlignment.Left,Parent=KF})
-inst("TextLabel",{Position=UDim2.new(0,70,0,33),Size=UDim2.new(1,-82,0,13),BackgroundTransparency=1,Text="by Oreo  •  "..BRAND.Version,TextColor3=C.T2,Font=C.FontR,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,Parent=KF})
-inst("Frame",{Position=UDim2.new(0,0,0,60),Size=UDim2.new(1,0,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=KF})
+-- Logo (36x36, vertically centered in the 56px header area)
+makeLogo(KF, UDim2.new(0,36,0,36), UDim2.new(0,14,0,10), Vector2.new(0,0))
+inst("TextLabel",{Position=UDim2.new(0,58,0,10),Size=UDim2.new(1,-70,0,18),BackgroundTransparency=1,Text=BRAND.Name,TextColor3=C.T1,Font=C.FontB,TextSize=15,TextXAlignment=Enum.TextXAlignment.Left,Parent=KF})
+inst("TextLabel",{Position=UDim2.new(0,58,0,29),Size=UDim2.new(1,-70,0,13),BackgroundTransparency=1,Text="by Oreo  •  "..BRAND.Version,TextColor3=C.T2,Font=C.FontR,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,Parent=KF})
+inst("Frame",{Position=UDim2.new(0,0,0,56),Size=UDim2.new(1,0,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=KF})
 
 local KBox=inst("Frame",{Position=UDim2.new(0,18,0,72),Size=UDim2.new(1,-36,0,40),BackgroundColor3=C.Surf,BorderSizePixel=0,Parent=KF},{crn(8),bdr(C.Bdr)})
 local KIn=inst("TextBox",{Size=UDim2.new(1,-16,1,0),Position=UDim2.new(0,12,0,0),BackgroundTransparency=1,PlaceholderText="Enter your license key...",PlaceholderColor3=C.TM,Text="",TextColor3=C.T1,Font=C.FontR,TextSize=13,TextXAlignment=Enum.TextXAlignment.Left,ClearTextOnFocus=false,Parent=KBox})
@@ -368,10 +368,12 @@ local BuildMain
 --=======================================================--
 --            MAKETAB + COMPONENTS                       --
 --=======================================================--
-local function MakeTab(name,icon)
+local function MakeTab(name,icon,hideSidebar)
     local btn=inst("TextButton",{
         Size=UDim2.new(1,0,0,36),BackgroundColor3=C.SurfH,BackgroundTransparency=1,
-        BorderSizePixel=0,Text="",AutoButtonColor=false,Parent=SideScroll,
+        BorderSizePixel=0,Text="",AutoButtonColor=false,
+        Visible=not hideSidebar,  -- hidden from sidebar if hideSidebar=true
+        Parent=SideScroll,
     },{crn(7)})
     local bar=inst("Frame",{
         Position=UDim2.new(0,0,0.5,0),AnchorPoint=Vector2.new(0,0.5),
@@ -414,7 +416,12 @@ local function MakeTab(name,icon)
         td.Bar.Visible=true
     end
 
-    if #AllTabs==1 then task.defer(SetActive) end
+    -- Only auto-select first VISIBLE (non-hidden) tab
+    if not hideSidebar then
+        local visibleCount = 0
+        for _,td in ipairs(AllTabs) do if td.Btn.Visible then visibleCount=visibleCount+1 end end
+        if visibleCount==1 then task.defer(SetActive) end
+    end
     btn.MouseButton1Click:Connect(SetActive)
     btn.MouseEnter:Connect(function() if ActiveTab~=td then tw(btn,.12,{BackgroundTransparency=0});tw(lbl,.12,{TextColor3=C.T1}) end end)
     btn.MouseLeave:Connect(function() if ActiveTab~=td then tw(btn,.12,{BackgroundTransparency=1});tw(lbl,.12,{TextColor3=C.T2}) end end)
@@ -629,9 +636,9 @@ function BuildMain(tier, expiresAt)
     inst("Frame",{Position=UDim2.new(0,0,1,0),AnchorPoint=Vector2.new(0,1),Size=UDim2.new(1,0,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=TB})
 
     -- Logo box
-    makeLogo(TB, UDim2.new(0,32,0,32), UDim2.new(0,12,.5,0), Vector2.new(0,.5))
-    inst("TextLabel",{Position=UDim2.new(0,52,0.5,-11),Size=UDim2.new(0,200,0,17),BackgroundTransparency=1,Text=BRAND.Name,TextColor3=C.T1,Font=C.FontB,TextSize=14,TextXAlignment=Enum.TextXAlignment.Left,Parent=TB})
-    inst("TextLabel",{Position=UDim2.new(0,52,0.5,7),Size=UDim2.new(0,200,0,13),BackgroundTransparency=1,Text=LP.DisplayName,TextColor3=C.T2,Font=C.FontR,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,Parent=TB})
+    makeLogo(TB, UDim2.new(0,34,0,34), UDim2.new(0,12,.5,0), Vector2.new(0,.5))
+    inst("TextLabel",{Position=UDim2.new(0,54,0.5,-11),Size=UDim2.new(0,200,0,17),BackgroundTransparency=1,Text=BRAND.Name,TextColor3=C.T1,Font=C.FontB,TextSize=14,TextXAlignment=Enum.TextXAlignment.Left,Parent=TB})
+    inst("TextLabel",{Position=UDim2.new(0,54,0.5,7),Size=UDim2.new(0,200,0,13),BackgroundTransparency=1,Text=LP.DisplayName,TextColor3=C.T2,Font=C.FontR,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,Parent=TB})
 
     -- Sidebar divider
     inst("Frame",{Position=UDim2.new(0,C.SW,0,10),Size=UDim2.new(0,1,0,C.TH-20),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=TB})
@@ -644,8 +651,8 @@ function BuildMain(tier, expiresAt)
     },{crn(6),bdr(C.Bdr),inst("TextLabel",{Size=UDim2.new(1,0,1,0),BackgroundTransparency=1,Text=BRAND.Version,TextColor3=C.T2,Font=C.FontR,TextSize=11})})
     -- "by Oreo" credit label, sits right of version badge
     inst("TextLabel",{
-        Position=UDim2.new(0,C.SW+88,0.5,0),AnchorPoint=Vector2.new(0,0.5),
-        Size=UDim2.new(0,60,0,22),
+        Position=UDim2.new(0,C.SW+90,0.5,0),AnchorPoint=Vector2.new(0,0.5),
+        Size=UDim2.new(0,55,0,22),
         BackgroundTransparency=1,
         Text="by Oreo",
         TextColor3=C.TM,
@@ -777,7 +784,8 @@ function BuildMain(tier, expiresAt)
     --=======================================================--
 
     -- SETTINGS (accessible via sidebar AND the ⚙ button in topbar)
-    local ST=MakeTab("Settings","◎")
+    -- Settings: hidden from sidebar — only via ⚙ topbar button
+    local ST=MakeTab("Settings","◎",true)
 
     ST:Section("Menu Controls")
     ST:Keybind("Toggle Menu",Enum.KeyCode.RightShift,function()
@@ -840,7 +848,11 @@ function BuildMain(tier, expiresAt)
     end)
     -- Wire up settings shortcut to directly activate the Settings tab page
     local function openSettings()
-        local stData = AllTabs[#AllTabs]
+        -- Find Settings tab by label text (it's hidden from sidebar)
+        local stData = nil
+        for _,td in ipairs(AllTabs) do
+            if td.Lbl and td.Lbl.Text == "Settings" then stData=td; break end
+        end
         if not stData then return end
         if ActiveTab == stData then return end
         if ActiveTab then
