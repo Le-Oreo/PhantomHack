@@ -46,12 +46,14 @@ local BRAND = {
     -- Example: if your decal URL is roblox.com/library/12345678 then set LogoID = "12345678"
     -- Leave as "" to use the letter fallback (shows first letter of hub name).
     LogoID     = "76539186831987",
-    -- Offline fallback keys (used if GitHub is unreachable)
-    -- These are TEMPORARY test keys — delete or change them when you go live
+    -- Offline / fallback keys — these ALWAYS work, even without internet
+    -- Delete or change these when you go live
     OfflineKeys = {
-        "PHANTOM-FREE-TEST",      -- Free tier test key
-        "PHANTOM-PREM-TEST",      -- Premium tier test key  
-        "PHANTOM-2026",           -- Legacy fallback
+        "PHANTOM-FREE-TEST",   -- Free tier test key
+        "PHANTOM-PREM-TEST",   -- Premium tier test key
+        "PHANTOM-2026",        -- Legacy fallback (Premium)
+        "PHANTOM-FREE",        -- Free fallback
+        "PHANTOM-VIP",         -- VIP fallback (Premium)
     },
 }
 
@@ -283,20 +285,23 @@ end
 --              KEY VALIDATION                           --
 --=======================================================--
 local function validateKey(entered)
+    -- Always check offline/fallback keys FIRST — instant, no HTTP needed
+    local offlineTiers = {
+        ["PHANTOM-FREE-TEST"]  = "Free",
+        ["PHANTOM-PREM-TEST"]  = "Premium",
+        ["PHANTOM-2026"]       = "Premium",
+        ["PHANTOM-FREE"]       = "Free",
+        ["PHANTOM-VIP"]        = "Premium",
+    }
+    for _,k in ipairs(BRAND.OfflineKeys) do
+        if entered == k then
+            return true, (offlineTiers[k] or "Free"), nil, nil
+        end
+    end
+
+    -- Then try GitHub live validation
     local ok,raw=pcall(function() return game:HttpGet(BRAND.KeysURL,true) end)
     if not ok or not raw or raw=="" then
-        -- Offline fallback — assign tier based on key prefix
-        local offlineTiers = {
-            ["PHANTOM-FREE-TEST"]  = "Free",
-            ["PHANTOM-PREM-TEST"]  = "Premium",
-            ["PHANTOM-2026"]       = "Premium",
-        }
-        for _,k in ipairs(BRAND.OfflineKeys) do
-            if entered==k then
-                local tier = offlineTiers[k] or "Free"
-                return true, tier, nil, nil
-            end
-        end
         return false,nil,nil,"Could not reach key server. Check your connection."
     end
     local pok,data=pcall(function() return HttpService:JSONDecode(raw) end)
@@ -325,9 +330,9 @@ local KF=inst("Frame",{
 },{crn(12),bdr(C.Bdr)})
 
 -- Logo
-makeLogo(KF, UDim2.new(0,32,0,32), UDim2.new(0,18,0,18), Vector2.new(0,0))
-inst("TextLabel",{Position=UDim2.new(0,58,0,15),Size=UDim2.new(1,-70,0,18),BackgroundTransparency=1,Text=BRAND.Name,TextColor3=C.T1,Font=C.FontB,TextSize=16,TextXAlignment=Enum.TextXAlignment.Left,Parent=KF})
-inst("TextLabel",{Position=UDim2.new(0,58,0,34),Size=UDim2.new(1,-70,0,13),BackgroundTransparency=1,Text="by Oreo  •  "..BRAND.Version,TextColor3=C.T2,Font=C.FontR,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,Parent=KF})
+makeLogo(KF, UDim2.new(0,46,0,46), UDim2.new(0,16,0,16), Vector2.new(0,0))
+inst("TextLabel",{Position=UDim2.new(0,70,0,14),Size=UDim2.new(1,-82,0,18),BackgroundTransparency=1,Text=BRAND.Name,TextColor3=C.T1,Font=C.FontB,TextSize=16,TextXAlignment=Enum.TextXAlignment.Left,Parent=KF})
+inst("TextLabel",{Position=UDim2.new(0,70,0,33),Size=UDim2.new(1,-82,0,13),BackgroundTransparency=1,Text="by Oreo  •  "..BRAND.Version,TextColor3=C.T2,Font=C.FontR,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,Parent=KF})
 inst("Frame",{Position=UDim2.new(0,0,0,60),Size=UDim2.new(1,0,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=KF})
 
 local KBox=inst("Frame",{Position=UDim2.new(0,18,0,72),Size=UDim2.new(1,-36,0,40),BackgroundColor3=C.Surf,BorderSizePixel=0,Parent=KF},{crn(8),bdr(C.Bdr)})
@@ -575,7 +580,7 @@ function BuildMain(tier, expiresAt)
     inst("Frame",{Position=UDim2.new(0,0,1,0),AnchorPoint=Vector2.new(0,1),Size=UDim2.new(1,0,0,1),BackgroundColor3=C.Bdr,BorderSizePixel=0,Parent=TB})
 
     -- Logo box
-    makeLogo(TB, UDim2.new(0,30,0,30), UDim2.new(0,14,.5,0), Vector2.new(0,.5))
+    makeLogo(TB, UDim2.new(0,32,0,32), UDim2.new(0,12,.5,0), Vector2.new(0,.5))
     inst("TextLabel",{Position=UDim2.new(0,52,0.5,-11),Size=UDim2.new(0,200,0,17),BackgroundTransparency=1,Text=BRAND.Name,TextColor3=C.T1,Font=C.FontB,TextSize=14,TextXAlignment=Enum.TextXAlignment.Left,Parent=TB})
     inst("TextLabel",{Position=UDim2.new(0,52,0.5,7),Size=UDim2.new(0,200,0,13),BackgroundTransparency=1,Text=LP.DisplayName,TextColor3=C.T2,Font=C.FontR,TextSize=11,TextXAlignment=Enum.TextXAlignment.Left,Parent=TB})
 
