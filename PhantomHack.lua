@@ -44,9 +44,9 @@ local BRAND = {
     -- Backend server URL — your deployed server.js
     -- e.g. "https://phantom-backend.railway.app"
     -- This handles auth, HWID locking and key-sharing detection
-    BackendURL = "http://localhost:3000",
+    BackendURL = "",
     -- Must match API_SECRET in your server.js .env file
-    APISecret  = "PhantomAPI",
+    APISecret  = "change_me_lua_secret",
 
     -- Fallback keys.json URL — if backend is unreachable the script
     -- falls back to reading keys.json from GitHub directly (no sharing protection)
@@ -490,18 +490,18 @@ GKBtn.MouseButton1Click:Connect(function()
 end)
 
 -- AUTO-LOGIN: check for saved key on startup
+-- Uses task.spawn with a longer wait so doAuth() is defined by the time we call it
 task.spawn(function()
-    task.wait(0.3)
+    task.wait(1.5)  -- wait for rest of script to finish loading
     local saved = loadSavedKey()
     if saved and saved ~= "" then
-        KIn.Text     = saved
-        KStatus.Text = "Auto-login key found — authorizing..."
+        KIn.Text           = saved
+        KStatus.Text       = "Auto-login key found — authorizing..."
         KStatus.TextColor3 = C.T2
-        ABtn.Text    = "Auto-login..."
-        -- Small delay so user can see the message
-        task.wait(0.8)
-        -- Fire auth
-        doAuth()
+        ABtn.Text          = "Auto-login..."
+        task.wait(0.5)
+        -- doAuth is defined later in the script — use the button click instead
+        ABtn:FireMouseButton1Click()
     end
 end)
 
