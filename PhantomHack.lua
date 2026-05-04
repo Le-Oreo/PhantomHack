@@ -260,13 +260,43 @@ end
 pcall(function() if CoreGui:FindFirstChild("PhantomHack") then CoreGui.PhantomHack:Destroy() end end)
 
 --==[ ROOT GUI ]==--
-local Gui=inst("ScreenGui",{Name="PhantomHack",ResetOnSpawn=false,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,IgnoreGuiInset=true})
-pcall(function()
-    if syn and syn.protect_gui then syn.protect_gui(Gui);Gui.Parent=CoreGui
-    elseif gethui then Gui.Parent=gethui()
-    else Gui.Parent=CoreGui end
-end)
-if not Gui.Parent then Gui.Parent=LP:WaitForChild("PlayerGui") end
+local Gui=inst("ScreenGui",{
+    Name="PhantomHack",ResetOnSpawn=false,
+    ZIndexBehavior=Enum.ZIndexBehavior.Sibling,
+    IgnoreGuiInset=true,
+    DisplayOrder=999,
+})
+
+-- Try every known method to parent the GUI
+local function tryParent()
+    -- Method 1: syn.protect_gui (Synapse X)
+    if syn and syn.protect_gui then
+        pcall(function() syn.protect_gui(Gui) end)
+        pcall(function() Gui.Parent=CoreGui end)
+        if Gui.Parent then return end
+    end
+    -- Method 2: gethui() (KRNL, Delta, Fluxus)
+    if gethui then
+        pcall(function() Gui.Parent=gethui() end)
+        if Gui.Parent then return end
+    end
+    -- Method 3: CoreGui directly (most executors)
+    pcall(function() Gui.Parent=CoreGui end)
+    if Gui.Parent then return end
+    -- Method 4: PlayerGui fallback (always works)
+    pcall(function() Gui.Parent=LP:WaitForChild("PlayerGui") end)
+end
+
+tryParent()
+
+-- If still no parent somehow, force PlayerGui
+if not Gui.Parent then
+    Gui.Parent = LP:WaitForChild("PlayerGui", 10)
+end
+
+-- Debug: confirm GUI was created
+print("[PhantomHack] GUI parent: "..(Gui.Parent and Gui.Parent.Name or "NIL - GUI FAILED TO PARENT"))
+print("[PhantomHack] GUI enabled: "..tostring(Gui.Enabled))
 
 --=======================================================--
 --                  NOTIFICATIONS                        --
