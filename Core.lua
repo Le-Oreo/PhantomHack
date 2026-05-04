@@ -11,8 +11,9 @@ local RAW = "https://raw.githubusercontent.com/Le-Oreo/PhantomHack/main/"
 -- ── Game registry ─────────────────────────────────────────────
 -- Add more game-specific scripts here as you make them
 local GAME_SCRIPTS = {
-    [11729688377] = RAW .. "BoogaBooga.lua",  -- Booga Booga
-    -- [PLACE_ID]  = RAW .. "YourGame.lua",   -- add more here
+    [11729688377]     = RAW .. "BoogaBooga.lua",    -- Booga Booga
+    [115209351507608] = RAW .. "TheArmory.lua",     -- The Armory
+    -- [PLACE_ID]    = RAW .. "YourGame.lua",       -- add more here
 }
 
 -- ── Check if this game has a custom script ────────────────────
