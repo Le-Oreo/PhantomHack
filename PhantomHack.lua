@@ -294,9 +294,6 @@ if not Gui.Parent then
     Gui.Parent = LP:WaitForChild("PlayerGui", 10)
 end
 
--- Debug: confirm GUI was created
-print("[PhantomHack] GUI parent: "..(Gui.Parent and Gui.Parent.Name or "NIL - GUI FAILED TO PARENT"))
-print("[PhantomHack] GUI enabled: "..tostring(Gui.Enabled))
 
 --=======================================================--
 --                  NOTIFICATIONS                        --
@@ -520,18 +517,18 @@ GKBtn.MouseButton1Click:Connect(function()
 end)
 
 -- AUTO-LOGIN: check for saved key on startup
--- Uses task.spawn with a longer wait so doAuth() is defined by the time we call it
+-- doAuth is defined later in the script so we use a long wait + _G reference
 task.spawn(function()
-    task.wait(1.5)  -- wait for rest of script to finish loading
+    task.wait(2)  -- wait for entire script to finish executing
     local saved = loadSavedKey()
     if saved and saved ~= "" then
         KIn.Text           = saved
-        KStatus.Text       = "Auto-login key found — authorizing..."
+        KStatus.Text       = "Auto-login — authorizing..."
         KStatus.TextColor3 = C.T2
         ABtn.Text          = "Auto-login..."
-        task.wait(0.5)
-        -- doAuth is defined later in the script — use the button click instead
-        ABtn:FireMouseButton1Click()
+        task.wait(0.3)
+        -- Trigger via global reference set at bottom of script
+        if _G._PH_doAuth then _G._PH_doAuth() end
     end
 end)
 
@@ -1174,6 +1171,7 @@ local AuthDone    = false
 local AuthAPI     = nil  -- set after BuildMain succeeds
 
 local function doAuth()
+    _G._PH_doAuth = doAuth
     local entered = KIn.Text
     if entered == "" then
         KStatus.Text = "Please enter your key."
