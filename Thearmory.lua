@@ -66,7 +66,23 @@
     Total: 46 verified features
 ]]
 
-local M  = loadstring(game:HttpGet("https://raw.githubusercontent.com/Le-Oreo/PhantomHack/main/PhantomHack.lua",true))()
+local RAW = "https://raw.githubusercontent.com/Le-Oreo/PhantomHack/main/"
+
+-- Load PhantomHack GUI template with error handling
+local ok1, M = pcall(function()
+    return loadstring(game:HttpGet(RAW.."PhantomHack.lua", true))()
+end)
+if not ok1 or not M then
+    -- Try with false (some executors need this)
+    local ok2, M2 = pcall(function()
+        return loadstring(game:HttpGet(RAW.."PhantomHack.lua"))()
+    end)
+    if not ok2 or not M2 then
+        error("[Phantom Hack] Failed to load PhantomHack.lua — check your internet connection\n"..tostring(M))
+    end
+    M = M2
+end
+
 local PH = M.WaitForAuth()
 
 local Players    = game:GetService("Players")
