@@ -38,7 +38,18 @@ end
 -- ── Universal script (no custom game found) ───────────────────
 print("[Phantom Hack] No custom script for place "..game.PlaceId.." — loading universal")
 
-local M  = loadstring(game:HttpGet(RAW.."PhantomHack.lua", true))()
+local ok1, M = pcall(function()
+    return loadstring(game:HttpGet(RAW.."PhantomHack.lua", true))()
+end)
+if not ok1 or not M then
+    local ok2, M2 = pcall(function()
+        return loadstring(game:HttpGet(RAW.."PhantomHack.lua"))()
+    end)
+    if not ok2 or not M2 then
+        error("[Phantom Hack] Failed to load PhantomHack.lua - check internet connection")
+    end
+    M = M2
+end
 local PH = M.WaitForAuth()
 
 local Players    = game:GetService("Players")
